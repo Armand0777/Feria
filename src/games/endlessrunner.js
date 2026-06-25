@@ -12,6 +12,17 @@ export const MODOS = {
 const SUELO_ALTO = 40
 const TECHO = 10
 
+// Robot: salto continuo mientras se mantiene presionado, interpola entre
+// un mínimo (tap corto) y un máximo (sostenido hasta el tope de frames)
+const ROBOT_MIN_VY = -7
+const ROBOT_MAX_VY = -13
+const ROBOT_MAX_FRAMES_CARGA = 18 // ≈ 0.3s a 60fps
+
+function lerp(a, b, t) {
+  const tClamp = Math.max(0, Math.min(1, t))
+  return a + (b - a) * tClamp
+}
+
 function generarVentanas() {
   return Array.from({ length: Math.floor(Math.random() * 8 + 4) }, () => ({
     x: Math.random(),
@@ -249,6 +260,7 @@ export class EndlessRunner {
       tiempoPresion: 0,
       impulsoRestante: 0,
       impulsoIncremento: 0,
+      frameUltimoSaltoOvni: -999,
     }
 
     this.obstaculos = []
@@ -321,11 +333,15 @@ export class EndlessRunner {
         break
       case 'ovni':
         if (this.jugador.saltosAire < 3) {
+          // Doble-tap rápido (<6 frames ≈ 100ms) = más altura, como en GD
+          const framesDesdeUltimo = this.frameCount - this.jugador.frameUltimoSaltoOvni
+          const boost = framesDesdeUltimo < 6 ? 1.3 : 1.0
           // Cada salto en el aire pierde fuerza (se va "quedando sin combustible")
-          const fuerza = -9 * (1 - this.jugador.saltosAire * 0.18)
+          const fuerza = -9 * boost * (1 - this.jugador.saltosAire * 0.18)
           this.aplicarImpulso(fuerza, 3)
           this.jugador.saltosAire++
           this.jugador.enSuelo = false
+          this.jugador.frameUltimoSaltoOvni = this.frameCount
           audio.salto()
         }
         break
@@ -333,8 +349,14 @@ export class EndlessRunner {
         this.jugador.presionando = true
         break
       case 'robot':
-        this.jugador.presionando = true
-        this.jugador.tiempoPresion = 0
+        // El robot despega de inmediato al presionar; la altura sube
+        // mientras se mantiene sostenido (no se "calcula" al soltar)
+        if (this.jugador.enSuelo) {
+          this.jugador.presionando = true
+          this.jugador.tiempoPresion = 0
+          this.jugador.enSuelo = false
+          audio.salto()
+        }
         break
     }
   }
@@ -343,13 +365,8 @@ export class EndlessRunner {
     switch (this.modoActual) {
       case 'robot':
         if (this.jugador.presionando) {
-          const carga = this.jugador.tiempoPresion / 60
+          const carga = this.jugador.tiempoPresion / ROBOT_MAX_FRAMES_CARGA
           audio.saltoRobot(carga)
-          // Curva no lineal: cargar poco da un salto chico desproporcionado,
-          // cargar mucho da un salto grande desproporcionado — la decisión importa más
-          const impulso = Math.max(-16, -8 - carga ** 1.6 * 8.5)
-          this.aplicarImpulso(impulso, 4)
-          this.jugador.enSuelo = false
           this.jugador.presionando = false
         }
         break
@@ -419,20 +436,20 @@ export class EndlessRunner {
         j.rotacion = Math.sin(this.frameCount * 0.1) * 5
         break
 
-      case 'ola': {
-        // Easing en vez de cambio instantáneo de dirección
-        const objetivoOla = j.presionando ? -7 : 7
-        j.velocidadY += (objetivoOla - j.velocidadY) * 0.25
+      case 'ola':
+        // Sin gravedad acumulativa: velocidad diagonal fija, cambio
+        // instantáneo de dirección — es el comportamiento real de Wave en GD
+        j.velocidadY = j.presionando ? -6 : 6
         j.rotacion = j.presionando ? -30 : 30
         break
-      }
 
       case 'robot':
-        if (j.presionando && j.enSuelo) {
-          // cargando el salto, sin gravedad
-        } else if (impulsoActivo) {
-          // ya se aplicó arriba; solo gira en el aire
-          if (!j.enSuelo) j.rotacion += 4
+        if (j.presionando) {
+          // Sube mientras se mantiene presionado, interpolando entre el
+          // mínimo (tap corto) y el máximo (sostenido hasta el tope)
+          const t = j.tiempoPresion / ROBOT_MAX_FRAMES_CARGA
+          j.velocidadY = lerp(ROBOT_MIN_VY, ROBOT_MAX_VY, t)
+          j.rotacion += 4
         } else {
           j.velocidadY += gravedad
           if (!j.enSuelo) j.rotacion += 4
@@ -507,16 +524,27 @@ export class EndlessRunner {
     const suelo = this.canvas.height - SUELO_ALTO - j.alto
 
     if (this.modoActual === 'bola') {
-      if (j.y >= suelo) {
-        j.y = suelo
-        j.velocidadY *= -1
-        this.squashTimer = 8
+      // La bola se posa en la superficie (como el cubo) y solo cambia de
+      // dirección por el tap del jugador — no rebota sola al tocar el suelo
+      const estabaEnSuelo = j.enSuelo
+      if (!this.gravedadInvertida) {
+        if (j.y >= suelo) {
+          j.y = suelo
+          j.velocidadY = 0
+          j.enSuelo = true
+        } else {
+          j.enSuelo = false
+        }
+      } else {
+        if (j.y <= TECHO) {
+          j.y = TECHO
+          j.velocidadY = 0
+          j.enSuelo = true
+        } else {
+          j.enSuelo = false
+        }
       }
-      if (j.y <= TECHO) {
-        j.y = TECHO
-        j.velocidadY *= -1
-        this.squashTimer = 8
-      }
+      if (!estabaEnSuelo && j.enSuelo) this.squashTimer = 8
     } else if (this.modoActual === 'nave' || this.modoActual === 'ola') {
       const max = this.canvas.height - 50
       if (j.y < TECHO) j.y = TECHO
@@ -1054,8 +1082,12 @@ export class EndlessRunner {
     })
     this.plataformasMoviles = this.plataformasMoviles.filter((p) => p.x + p.ancho > 0)
 
-    if (this.modoActual === 'robot' && this.jugador.presionando && this.jugador.enSuelo) {
-      this.jugador.tiempoPresion = Math.min(this.jugador.tiempoPresion + 1, 60)
+    if (this.modoActual === 'robot' && this.jugador.presionando) {
+      this.jugador.tiempoPresion++
+      if (this.jugador.tiempoPresion >= ROBOT_MAX_FRAMES_CARGA) {
+        this.jugador.tiempoPresion = ROBOT_MAX_FRAMES_CARGA
+        this.jugador.presionando = false
+      }
     }
 
     this.actualizarParallax()
@@ -1535,7 +1567,7 @@ export class EndlessRunner {
   dibujarBarraCarga() {
     const ctx = this.ctx
     const j = this.jugador
-    const pct = j.tiempoPresion / 60
+    const pct = j.tiempoPresion / ROBOT_MAX_FRAMES_CARGA
 
     ctx.save()
     ctx.fillStyle = '#1e293b'
