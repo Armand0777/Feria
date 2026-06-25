@@ -29,7 +29,7 @@ const TRAIL_CONFIG = {
   robot: { forma: 'cuadrado', color: '#fbbf24', cantidad: 2, vida: 22, tamano: 7, offsetX: -2, offsetY: 4 },
 }
 
-export function dibujarForma(ctx, modo, x, y, ancho, alto, color, rotacion) {
+export function dibujarForma(ctx, modo, x, y, ancho, alto, color, rotacion, squash = 0) {
   const cx = x + ancho / 2
   const cy = y + alto / 2
 
@@ -86,6 +86,8 @@ export function dibujarForma(ctx, modo, x, y, ancho, alto, color, rotacion) {
 
     case 'bola': {
       const radio = ancho / 2
+      // Squash & stretch al rebotar en suelo/techo
+      ctx.scale(1 + squash * 0.3, 1 - squash * 0.3)
       ctx.fillStyle = color
       ctx.beginPath()
       ctx.arc(0, 0, radio, 0, Math.PI * 2)
@@ -245,6 +247,8 @@ export class EndlessRunner {
       saltosAire: 0,
       presionando: false,
       tiempoPresion: 0,
+      impulsoRestante: 0,
+      impulsoIncremento: 0,
     }
 
     this.obstaculos = []
@@ -253,8 +257,10 @@ export class EndlessRunner {
     this.plataformasMoviles = []
     this.orbes = []
     this.trampolin = []
+    this.imanes = []
     this.sobrePlataforma = false
     this.plataformaActual = null
+    this.squashTimer = 0
     this.puntaje = 0
     this.velocidad = this.config.juego.velocidadInicial
     this.frameCount = 0
@@ -315,7 +321,9 @@ export class EndlessRunner {
         break
       case 'ovni':
         if (this.jugador.saltosAire < 3) {
-          this.jugador.velocidadY = -9
+          // Cada salto en el aire pierde fuerza (se va "quedando sin combustible")
+          const fuerza = -9 * (1 - this.jugador.saltosAire * 0.18)
+          this.aplicarImpulso(fuerza, 3)
           this.jugador.saltosAire++
           this.jugador.enSuelo = false
           audio.salto()
@@ -337,8 +345,10 @@ export class EndlessRunner {
         if (this.jugador.presionando) {
           const carga = this.jugador.tiempoPresion / 60
           audio.saltoRobot(carga)
-          const impulso = Math.max(-16, -8 - this.jugador.tiempoPresion * 0.15)
-          this.jugador.velocidadY = impulso
+          // Curva no lineal: cargar poco da un salto chico desproporcionado,
+          // cargar mucho da un salto grande desproporcionado — la decisión importa más
+          const impulso = Math.max(-16, -8 - carga ** 1.6 * 8.5)
+          this.aplicarImpulso(impulso, 4)
           this.jugador.enSuelo = false
           this.jugador.presionando = false
         }
@@ -352,29 +362,51 @@ export class EndlessRunner {
 
   saltar() {
     if (this.jugador.enSuelo) {
-      this.jugador.velocidadY = this.config.juego.altoDeSalto
+      this.aplicarImpulso(this.config.juego.altoDeSalto, 3)
       this.jugador.enSuelo = false
       this.jugador.saltosAire = 0
       audio.salto()
     }
   }
 
+  // Suaviza el inicio de un salto/impulso en lugar de asignar la velocidad de
+  // golpe: arranca al 45% del objetivo y lo alcanza en `frames` (evita el
+  // efecto "teletransporte" del salto brusco).
+  aplicarImpulso(velocidadObjetivo, frames = 3) {
+    const j = this.jugador
+    const inicio = velocidadObjetivo * 0.45
+    j.velocidadY = inicio
+    j.impulsoRestante = frames
+    j.impulsoIncremento = (velocidadObjetivo - inicio) / frames
+  }
+
   actualizarFisica() {
     const j = this.jugador
     const gravedad = this.config.juego.gravedad
 
+    // Mientras dura el impulso suavizado de un salto, no se le suma gravedad
+    // encima (si no, el salto se sentiría igual de brusco que antes)
+    const impulsoActivo = j.impulsoRestante > 0
+    if (impulsoActivo) {
+      j.velocidadY += j.impulsoIncremento
+      j.impulsoRestante--
+    }
+
     switch (this.modoActual) {
       case 'cubo':
-        j.velocidadY += gravedad
+        if (!impulsoActivo) j.velocidadY += gravedad
         if (!j.enSuelo) j.rotacion += 3
         break
 
-      case 'nave':
-        if (j.presionando) j.velocidadY -= 0.6
-        else j.velocidadY += 0.4
-        j.velocidadY = Math.max(-8, Math.min(8, j.velocidadY))
+      case 'nave': {
+        // Easing: la velocidad se acerca suavemente a un objetivo en vez de
+        // sumar/restar de golpe, da una curva más fluida al subir/bajar
+        const objetivoNave = j.presionando ? -9 : 7
+        j.velocidadY += (objetivoNave - j.velocidadY) * 0.15
+        j.velocidadY = Math.max(-9, Math.min(9, j.velocidadY))
         j.rotacion = j.velocidadY * 2
         break
+      }
 
       case 'bola':
         if (this.gravedadInvertida) j.velocidadY -= gravedad
@@ -383,18 +415,24 @@ export class EndlessRunner {
         break
 
       case 'ovni':
-        j.velocidadY += gravedad * 0.6
+        if (!impulsoActivo) j.velocidadY += gravedad * 0.6
         j.rotacion = Math.sin(this.frameCount * 0.1) * 5
         break
 
-      case 'ola':
-        j.velocidadY = j.presionando ? -6 : 6
+      case 'ola': {
+        // Easing en vez de cambio instantáneo de dirección
+        const objetivoOla = j.presionando ? -7 : 7
+        j.velocidadY += (objetivoOla - j.velocidadY) * 0.25
         j.rotacion = j.presionando ? -30 : 30
         break
+      }
 
       case 'robot':
         if (j.presionando && j.enSuelo) {
           // cargando el salto, sin gravedad
+        } else if (impulsoActivo) {
+          // ya se aplicó arriba; solo gira en el aire
+          if (!j.enSuelo) j.rotacion += 4
         } else {
           j.velocidadY += gravedad
           if (!j.enSuelo) j.rotacion += 4
@@ -472,10 +510,12 @@ export class EndlessRunner {
       if (j.y >= suelo) {
         j.y = suelo
         j.velocidadY *= -1
+        this.squashTimer = 8
       }
       if (j.y <= TECHO) {
         j.y = TECHO
         j.velocidadY *= -1
+        this.squashTimer = 8
       }
     } else if (this.modoActual === 'nave' || this.modoActual === 'ola') {
       const max = this.canvas.height - 50
@@ -503,7 +543,7 @@ export class EndlessRunner {
     const suelo = this.canvas.height - SUELO_ALTO
     const esPrincipiante = this.puntaje < 300
 
-    if (rand < 0.22) {
+    if (rand < 0.18) {
       // Pico simple
       this.obstaculos.push({
         tipo: 'pico',
@@ -512,7 +552,7 @@ export class EndlessRunner {
         ancho: 40,
         alto: 50,
       })
-    } else if (rand < 0.38) {
+    } else if (rand < 0.3) {
       // Bloque doble
       this.obstaculos.push({
         tipo: 'bloqueDoble',
@@ -521,7 +561,7 @@ export class EndlessRunner {
         ancho: 34,
         alto: 68,
       })
-    } else if (rand < 0.5 && !esPrincipiante) {
+    } else if (rand < 0.4 && !esPrincipiante) {
       // Sierra circular (no en modo principiante)
       const radio = 22 + Math.random() * 12
       this.obstaculos.push({
@@ -532,7 +572,7 @@ export class EndlessRunner {
         rotacion: 0,
         velocidadRotacion: 0.05 + Math.random() * 0.04,
       })
-    } else if (rand < 0.6 && !esPrincipiante) {
+    } else if (rand < 0.48 && !esPrincipiante) {
       // Pico doble techo + suelo
       let altoSuelo = 45 + Math.random() * 25
       const altoTecho = 40 + Math.random() * 20
@@ -548,7 +588,21 @@ export class EndlessRunner {
         altoSuelo,
         altoTecho,
       })
-    } else if (rand < 0.7) {
+    } else if (rand < 0.56 && !esPrincipiante) {
+      // Láser intermitente (mata solo cuando está encendido)
+      this.obstaculos.push({
+        tipo: 'laser',
+        x: this.canvas.width,
+        y: 0,
+        ancho: 14,
+        alto: this.canvas.height - SUELO_ALTO,
+        cicloEncendido: 45,
+        cicloApagado: 35,
+        cicloTimer: 0,
+        fase: Math.floor(Math.random() * 80),
+        encendido: false,
+      })
+    } else if (rand < 0.64) {
       // Trampolín (siempre puede aparecer — es positivo)
       this.trampolin.push({
         tipo: 'trampolin',
@@ -559,7 +613,7 @@ export class EndlessRunner {
         animando: false,
         frameAnimacion: 0,
       })
-    } else if (rand < 0.8 && !esPrincipiante) {
+    } else if (rand < 0.72 && !esPrincipiante) {
       // Plataforma móvil
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
@@ -574,7 +628,7 @@ export class EndlessRunner {
         fase: Math.random() * Math.PI * 2,
         frameCount: 0,
       })
-    } else if (rand < 0.9 && !esPrincipiante) {
+    } else if (rand < 0.8 && !esPrincipiante) {
       // Orbe de salto
       this.orbes.push({
         tipo: 'orbe',
@@ -583,6 +637,25 @@ export class EndlessRunner {
         radio: 14,
         pulsacion: 0,
         activado: false,
+      })
+    } else if (rand < 0.88 && !esPrincipiante) {
+      // Imán invertido: no mata, desestabiliza atrayendo al jugador hacia su centro
+      this.imanes.push({
+        tipo: 'iman',
+        x: this.canvas.width,
+        y: this.canvas.height / 2,
+        radio: 70,
+        pulsacion: 0,
+      })
+    } else if (rand < 0.95 && !esPrincipiante) {
+      // Muro frágil: se rompe si cae encima (plataforma de un solo uso),
+      // mata si lo toca de costado
+      this.obstaculos.push({
+        tipo: 'muroFragil',
+        x: this.canvas.width,
+        y: suelo - 40,
+        ancho: 36,
+        alto: 40,
       })
     } else {
       // Pico simple de respaldo
@@ -681,7 +754,7 @@ export class EndlessRunner {
       this.jugador.y + this.jugador.alto <= t.y + t.alto + 6
 
     if (cayendo && enX && enY) {
-      this.jugador.velocidadY = this.config.juego.altoDeSalto * 2
+      this.aplicarImpulso(this.config.juego.altoDeSalto * 2, 4)
       this.jugador.enSuelo = false
       this.jugador.saltosAire = 0
       t.animando = true
@@ -726,7 +799,7 @@ export class EndlessRunner {
 
     if (distancia < o.radio + 16) {
       o.activado = true
-      this.jugador.velocidadY = this.config.juego.altoDeSalto - 3
+      this.aplicarImpulso(this.config.juego.altoDeSalto - 3, 3)
       this.jugador.enSuelo = false
 
       for (let i = 0; i < 8; i++) {
@@ -745,6 +818,45 @@ export class EndlessRunner {
     return false
   }
 
+  colisionMuroFragil(obs) {
+    const cayendo = this.jugador.velocidadY >= 0
+    const enX = this.jugador.x + this.jugador.ancho > obs.x && this.jugador.x < obs.x + obs.ancho
+    const pieJugador = this.jugador.y + this.jugador.alto
+    const enYTope = pieJugador >= obs.y && pieJugador <= obs.y + 10 && this.jugador.y < obs.y
+
+    if (cayendo && enX && enYTope) {
+      this.jugador.velocidadY = -4
+      this.generarRoturaMuro(obs)
+      return true
+    }
+    return false
+  }
+
+  generarRoturaMuro(obs) {
+    for (let i = 0; i < 10; i++) {
+      this.particulas.push({
+        x: obs.x + obs.ancho / 2,
+        y: obs.y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: -Math.random() * 6,
+        vida: 1.0,
+        color: '#94a3b8',
+      })
+    }
+    audio.salto()
+  }
+
+  aplicarImanes() {
+    for (const m of this.imanes) {
+      const jcx = this.jugador.x + this.jugador.ancho / 2
+      const jcy = this.jugador.y + this.jugador.alto / 2
+      const dist = Math.sqrt((jcx - m.x) ** 2 + (jcy - m.y) ** 2)
+      if (dist < m.radio) {
+        this.jugador.velocidadY += (m.y - jcy) * 0.025
+      }
+    }
+  }
+
   verificarColisiones() {
     for (const t of this.trampolin) {
       this.colisionTrampolin(t)
@@ -756,6 +868,13 @@ export class EndlessRunner {
 
     this.actualizarColisionPlataforma()
 
+    // Muros frágiles: si el jugador cae encima se rompen (no matan) y se
+    // quitan de la lista antes de que el chequeo letal genérico los vea
+    this.obstaculos = this.obstaculos.filter((obs) => {
+      if (obs.tipo === 'muroFragil') return !this.colisionMuroFragil(obs)
+      return true
+    })
+
     for (const obs of this.obstaculos) {
       let colision = false
 
@@ -763,6 +882,14 @@ export class EndlessRunner {
         colision = this.colisionSierra(obs)
       } else if (obs.tipo === 'picoDoble') {
         colision = this.colisionPicoDoble(obs)
+      } else if (obs.tipo === 'laser') {
+        const margen = 4
+        colision =
+          obs.encendido &&
+          this.jugador.x + margen < obs.x + obs.ancho &&
+          this.jugador.x + this.jugador.ancho - margen > obs.x &&
+          this.jugador.y + margen < obs.y + obs.alto &&
+          this.jugador.y + this.jugador.alto - margen > obs.y
       } else {
         const margen = 4
         colision =
@@ -823,8 +950,21 @@ export class EndlessRunner {
     this.portalesModo.forEach((p) => (p.x -= this.velocidad))
 
     this.obstaculos.forEach((o) => {
-      if (o.tipo === 'sierra') o.rotacion += o.velocidadRotacion
+      if (o.tipo === 'sierra') {
+        o.rotacion += o.velocidadRotacion
+      } else if (o.tipo === 'laser') {
+        o.cicloTimer++
+        const ciclo = o.cicloEncendido + o.cicloApagado
+        o.encendido = (o.cicloTimer + o.fase) % ciclo < o.cicloEncendido
+      }
     })
+
+    this.imanes.forEach((m) => {
+      m.x -= this.velocidad
+    })
+    this.imanes = this.imanes.filter((m) => m.x + m.radio * 2 > 0)
+
+    if (this.squashTimer > 0) this.squashTimer--
 
     this.trampolin.forEach((t) => {
       t.x -= this.velocidad
@@ -850,6 +990,7 @@ export class EndlessRunner {
 
     this.actualizarParallax()
     this.actualizarFisica()
+    this.aplicarImanes()
     this.jugador.y += this.jugador.velocidadY
     this.actualizarColisionPlataforma()
     this.actualizarTrail()
@@ -1088,6 +1229,74 @@ export class EndlessRunner {
     ctx.shadowBlur = 0
   }
 
+  dibujarLaser(obs) {
+    const ctx = this.ctx
+    ctx.save()
+
+    if (obs.encendido) {
+      ctx.fillStyle = '#ef4444'
+      ctx.shadowBlur = 16
+      ctx.shadowColor = '#ef4444'
+      ctx.fillRect(obs.x, obs.y, obs.ancho, obs.alto)
+      ctx.fillStyle = '#fecaca'
+      ctx.fillRect(obs.x + obs.ancho / 2 - 1.5, obs.y, 3, obs.alto)
+    } else {
+      ctx.strokeStyle = '#ef444455'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([3, 5])
+      ctx.strokeRect(obs.x, obs.y, obs.ancho, obs.alto)
+      ctx.setLineDash([])
+    }
+
+    ctx.restore()
+  }
+
+  dibujarMuroFragil(obs) {
+    const ctx = this.ctx
+    ctx.save()
+    ctx.fillStyle = '#94a3b8'
+    ctx.shadowBlur = 8
+    ctx.shadowColor = '#94a3b8'
+    ctx.beginPath()
+    ctx.roundRect(obs.x, obs.y, obs.ancho, obs.alto, 4)
+    ctx.fill()
+    ctx.shadowBlur = 0
+
+    ctx.strokeStyle = '#475569'
+    ctx.lineWidth = 1.5
+    ctx.beginPath()
+    ctx.moveTo(obs.x + 6, obs.y + 6)
+    ctx.lineTo(obs.x + obs.ancho / 2, obs.y + obs.alto / 2)
+    ctx.lineTo(obs.x + obs.ancho - 8, obs.y + 10)
+    ctx.moveTo(obs.x + obs.ancho / 2, obs.y + obs.alto / 2)
+    ctx.lineTo(obs.x + 10, obs.y + obs.alto - 6)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  dibujarIman(m) {
+    const ctx = this.ctx
+    m.pulsacion += 0.05
+    ctx.save()
+    for (let i = 0; i < 3; i++) {
+      const r = m.radio * (0.4 + i * 0.3) + Math.sin(m.pulsacion + i) * 4
+      ctx.globalAlpha = 0.15 - i * 0.03
+      ctx.strokeStyle = '#a855f7'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.arc(m.x, m.y, r, 0, Math.PI * 2)
+      ctx.stroke()
+    }
+    ctx.globalAlpha = 1
+    ctx.fillStyle = '#a855f7'
+    ctx.shadowBlur = 14
+    ctx.shadowColor = '#a855f7'
+    ctx.beginPath()
+    ctx.arc(m.x, m.y, 8, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }
+
   dibujarObstaculo(obs) {
     switch (obs.tipo) {
       case 'pico':
@@ -1107,6 +1316,12 @@ export class EndlessRunner {
         break
       case 'picoDoble':
         this.dibujarPicoDoble(obs)
+        break
+      case 'laser':
+        this.dibujarLaser(obs)
+        break
+      case 'muroFragil':
+        this.dibujarMuroFragil(obs)
         break
     }
   }
@@ -1394,6 +1609,7 @@ export class EndlessRunner {
     this.trampolin.forEach((t) => this.dibujarTrampolin(t))
     this.plataformasMoviles.forEach((p) => this.dibujarPlataformaMovil(p))
     this.orbes.forEach((o) => this.dibujarOrbe(o))
+    this.imanes.forEach((m) => this.dibujarIman(m))
     this.dibujarTrail()
 
     if (!this.terminado) {
@@ -1406,6 +1622,7 @@ export class EndlessRunner {
         this.jugador.alto,
         MODOS[this.modoActual].color,
         this.jugador.rotacion,
+        this.modoActual === 'bola' ? this.squashTimer / 8 : 0,
       )
     } else {
       this.dibujarParticulas()

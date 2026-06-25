@@ -1,6 +1,6 @@
 import { EndlessRunner } from './endlessrunner'
 
-function dibujarEtiqueta(ctx, nombre, controles, config, offsetX, ancho) {
+function dibujarEtiqueta(ctx, nombre, config, offsetX, ancho) {
   ctx.save()
   ctx.fillStyle = 'rgba(0,0,0,0.5)'
   ctx.fillRect(offsetX, 0, ancho, 28)
@@ -18,7 +18,7 @@ function dibujarEtiqueta(ctx, nombre, controles, config, offsetX, ancho) {
   ctx.font = '10px monospace'
   ctx.fillStyle = '#9ca3af'
   ctx.textAlign = 'right'
-  ctx.fillText(controles, offsetX + ancho - 8, 18)
+  ctx.fillText('TOCA TU LADO', offsetX + ancho - 8, 18)
   ctx.textAlign = 'left'
   ctx.restore()
 }
@@ -41,14 +41,14 @@ function dibujarCountdown(ctx, totalAncho, alto, configJ1, configJ2) {
   ctx.textAlign = 'center'
   ctx.font = 'bold 16px monospace'
   ctx.fillStyle = '#22d3ee'
-  ctx.fillText('PRESIONA TU TECLA PARA INICIAR', totalAncho / 2, alto / 2 - 10)
+  ctx.fillText('TOCA TU LADO DE LA PANTALLA PARA INICIAR', totalAncho / 2, alto / 2 - 10)
 
   ctx.font = 'bold 13px monospace'
   ctx.fillStyle = configJ1.jugador.color
-  ctx.fillText('J1: W / ESPACIO', totalAncho / 4, alto / 2 + 20)
+  ctx.fillText('J1 ◄ TOCA AQUÍ', totalAncho / 4, alto / 2 + 20)
 
   ctx.fillStyle = configJ2.jugador.color
-  ctx.fillText('J2: ↑ FLECHA', (totalAncho / 4) * 3, alto / 2 + 20)
+  ctx.fillText('TOCA AQUÍ ► J2', (totalAncho / 4) * 3, alto / 2 + 20)
 
   ctx.textAlign = 'left'
   ctx.restore()
@@ -116,6 +116,18 @@ export class EndlessRunnerVersus {
     this.juegoJ2.soltarPresion()
   }
 
+  // Permite controlar el versus con un solo toque/clic sobre el canvas:
+  // la mitad izquierda controla a J1, la derecha a J2.
+  presionarEnPosicion(x) {
+    if (x < this.anchoMitad) this.presionarJ1()
+    else this.presionarJ2()
+  }
+
+  soltarEnPosicion(x) {
+    if (x < this.anchoMitad) this.soltarJ1()
+    else this.soltarJ2()
+  }
+
   registrarControles() {
     this._onKeyDown = (e) => {
       if (e.code === 'KeyW' || e.code === 'Space') {
@@ -177,15 +189,8 @@ export class EndlessRunnerVersus {
     this.ctx.fillStyle = '#1e293b'
     this.ctx.fillRect(this.anchoMitad - 1, 0, 3, this.alto)
 
-    dibujarEtiqueta(this.ctx, 'JUGADOR 1', 'WASD', this.configJ1, 0, this.anchoMitad)
-    dibujarEtiqueta(
-      this.ctx,
-      'JUGADOR 2',
-      '↑ FLECHA',
-      this.configJ2,
-      this.anchoMitad + 2,
-      this.anchoMitad,
-    )
+    dibujarEtiqueta(this.ctx, 'JUGADOR 1', this.configJ1, 0, this.anchoMitad)
+    dibujarEtiqueta(this.ctx, 'JUGADOR 2', this.configJ2, this.anchoMitad + 2, this.anchoMitad)
 
     if (this.corriendo) {
       dibujarPuntajeHeader(this.ctx, this.juegoJ1.puntaje, this.configJ1, 0, this.anchoMitad)
