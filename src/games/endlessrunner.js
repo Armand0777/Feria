@@ -23,6 +23,25 @@ function lerp(a, b, t) {
   return a + (b - a) * tClamp
 }
 
+// Coyote time: margen para saltar justo después de salir de una plataforma
+const COYOTE_FRAMES = 6 // ≈ 0.1s a 60fps — solo Cubo y Robot
+
+const COLORES_ORBE = {
+  amarillo: '#fde047',
+  rosa: '#f9a8d4',
+  rojo: '#ef4444',
+  azul: '#60a5fa',
+  verde: '#4ade80',
+  negro: '#475569',
+}
+
+const COLORES_PAD = {
+  amarillo: '#fde047',
+  rosa: '#f9a8d4',
+  rojo: '#ef4444',
+  azul: '#60a5fa',
+}
+
 function generarVentanas() {
   return Array.from({ length: Math.floor(Math.random() * 8 + 4) }, () => ({
     x: Math.random(),
@@ -261,6 +280,7 @@ export class EndlessRunner {
       impulsoRestante: 0,
       impulsoIncremento: 0,
       frameUltimoSaltoOvni: -999,
+      coyoteTimer: 0,
     }
 
     this.obstaculos = []
@@ -319,10 +339,11 @@ export class EndlessRunner {
     audio.init()
 
     this.corriendo = true
+    if (this.intentarActivarOrbes()) return
 
     switch (this.modoActual) {
       case 'cubo':
-        if (this.jugador.enSuelo) this.saltar()
+        this.saltar()
         break
       case 'nave':
         this.jugador.presionando = true
@@ -336,8 +357,9 @@ export class EndlessRunner {
           // Doble-tap rápido (<6 frames ≈ 100ms) = más altura, como en GD
           const framesDesdeUltimo = this.frameCount - this.jugador.frameUltimoSaltoOvni
           const boost = framesDesdeUltimo < 6 ? 1.3 : 1.0
+          const signo = this.gravedadInvertida ? -1 : 1
           // Cada salto en el aire pierde fuerza (se va "quedando sin combustible")
-          const fuerza = -9 * boost * (1 - this.jugador.saltosAire * 0.18)
+          const fuerza = -9 * boost * signo * (1 - this.jugador.saltosAire * 0.18)
           this.aplicarImpulso(fuerza, 3)
           this.jugador.saltosAire++
           this.jugador.enSuelo = false
@@ -351,10 +373,11 @@ export class EndlessRunner {
       case 'robot':
         // El robot despega de inmediato al presionar; la altura sube
         // mientras se mantiene sostenido (no se "calcula" al soltar)
-        if (this.jugador.enSuelo) {
+        if (this.jugador.enSuelo || this.jugador.coyoteTimer > 0) {
           this.jugador.presionando = true
           this.jugador.tiempoPresion = 0
           this.jugador.enSuelo = false
+          this.jugador.coyoteTimer = 0
           audio.salto()
         }
         break
@@ -378,9 +401,11 @@ export class EndlessRunner {
   }
 
   saltar() {
-    if (this.jugador.enSuelo) {
-      this.aplicarImpulso(this.config.juego.altoDeSalto, 3)
+    if (this.jugador.enSuelo || this.jugador.coyoteTimer > 0) {
+      const signo = this.gravedadInvertida ? -1 : 1
+      this.aplicarImpulso(this.config.juego.altoDeSalto * signo, 3)
       this.jugador.enSuelo = false
+      this.jugador.coyoteTimer = 0
       this.jugador.saltosAire = 0
       audio.salto()
     }
@@ -400,6 +425,10 @@ export class EndlessRunner {
   actualizarFisica() {
     const j = this.jugador
     const gravedad = this.config.juego.gravedad
+    // Signo de gravedad global — lo usan Cubo/OVNI/Robot además de Bola,
+    // para que los orbes Azul/Verde (invertir gravedad) tengan efecto en
+    // cualquier modo, no solo en Bola
+    const signoGrav = this.gravedadInvertida ? -1 : 1
 
     // Mientras dura el impulso suavizado de un salto, no se le suma gravedad
     // encima (si no, el salto se sentiría igual de brusco que antes)
@@ -411,14 +440,14 @@ export class EndlessRunner {
 
     switch (this.modoActual) {
       case 'cubo':
-        if (!impulsoActivo) j.velocidadY += gravedad
+        if (!impulsoActivo) j.velocidadY += gravedad * signoGrav
         if (!j.enSuelo) j.rotacion += 3
         break
 
       case 'nave': {
         // Easing: la velocidad se acerca suavemente a un objetivo en vez de
         // sumar/restar de golpe, da una curva más fluida al subir/bajar
-        const objetivoNave = j.presionando ? -9 : 7
+        const objetivoNave = (j.presionando ? -9 : 7) * signoGrav
         j.velocidadY += (objetivoNave - j.velocidadY) * 0.15
         j.velocidadY = Math.max(-9, Math.min(9, j.velocidadY))
         j.rotacion = j.velocidadY * 2
@@ -432,13 +461,14 @@ export class EndlessRunner {
         break
 
       case 'ovni':
-        if (!impulsoActivo) j.velocidadY += gravedad * 0.6
+        if (!impulsoActivo) j.velocidadY += gravedad * 0.6 * signoGrav
         j.rotacion = Math.sin(this.frameCount * 0.1) * 5
         break
 
       case 'ola':
         // Sin gravedad acumulativa: velocidad diagonal fija, cambio
         // instantáneo de dirección — es el comportamiento real de Wave en GD
+        // (la Wave es inmune a la inversión de gravedad de los orbes)
         j.velocidadY = j.presionando ? -6 : 6
         j.rotacion = j.presionando ? -30 : 30
         break
@@ -448,10 +478,10 @@ export class EndlessRunner {
           // Sube mientras se mantiene presionado, interpolando entre el
           // mínimo (tap corto) y el máximo (sostenido hasta el tope)
           const t = j.tiempoPresion / ROBOT_MAX_FRAMES_CARGA
-          j.velocidadY = lerp(ROBOT_MIN_VY, ROBOT_MAX_VY, t)
+          j.velocidadY = lerp(ROBOT_MIN_VY, ROBOT_MAX_VY, t) * signoGrav
           j.rotacion += 4
         } else {
-          j.velocidadY += gravedad
+          j.velocidadY += gravedad * signoGrav
           if (!j.enSuelo) j.rotacion += 4
         }
         break
@@ -549,7 +579,7 @@ export class EndlessRunner {
       const max = this.canvas.height - 50
       if (j.y < TECHO) j.y = TECHO
       if (j.y > max) j.y = max
-    } else {
+    } else if (!this.gravedadInvertida) {
       if (j.y >= suelo) {
         j.y = suelo
         j.velocidadY = 0
@@ -563,7 +593,25 @@ export class EndlessRunner {
         j.y = TECHO
         j.velocidadY = 0
       }
+    } else {
+      // Gravedad invertida (orbe azul/verde): el techo pasa a ser "el suelo"
+      if (j.y <= TECHO) {
+        j.y = TECHO
+        j.velocidadY = 0
+        j.enSuelo = true
+        j.saltosAire = 0
+        j.rotacion = Math.round(j.rotacion / 90) * 90
+      } else {
+        j.enSuelo = false
+      }
+      if (j.y >= suelo) {
+        j.y = suelo
+        j.velocidadY = 0
+      }
     }
+
+    if (j.enSuelo) j.coyoteTimer = COYOTE_FRAMES
+    else if (j.coyoteTimer > 0) j.coyoteTimer--
   }
 
   generarObstaculo() {
@@ -617,9 +665,14 @@ export class EndlessRunner {
         altoTecho,
       })
     } else if (rand < 0.64) {
-      // Trampolín (siempre puede aparecer — es positivo)
+      // Pad automático (siempre puede aparecer — es positivo, no requiere input)
+      const variantes = esPrincipiante
+        ? ['amarillo']
+        : ['amarillo', 'rosa', 'rojo', 'azul']
+      const variante = variantes[Math.floor(Math.random() * variantes.length)]
       this.trampolin.push({
         tipo: 'trampolin',
+        variante,
         x: this.canvas.width,
         y: suelo - 14,
         ancho: 56,
@@ -643,9 +696,12 @@ export class EndlessRunner {
         frameCount: 0,
       })
     } else if (rand < 0.8 && !esPrincipiante) {
-      // Orbe de salto
+      // Orbe — requiere que el jugador presione al tocarlo (no es automático)
+      const variantes = ['amarillo', 'rosa', 'rojo', 'azul', 'verde', 'negro']
+      const variante = variantes[Math.floor(Math.random() * variantes.length)]
       this.orbes.push({
         tipo: 'orbe',
+        variante,
         x: this.canvas.width,
         y: 60 + Math.random() * 140,
         radio: 14,
@@ -834,7 +890,29 @@ export class EndlessRunner {
       this.jugador.y + this.jugador.alto <= t.y + t.alto + 6
 
     if (cayendo && enX && enY) {
-      this.aplicarImpulso(this.config.juego.altoDeSalto * 2, 4)
+      // Pad automático: se activa solo al pisarlo, sin requerir input
+      const base = this.config.juego.altoDeSalto
+      const signo = this.gravedadInvertida ? -1 : 1
+
+      switch (t.variante) {
+        case 'rosa':
+          this.aplicarImpulso(base * 0.55 * signo, 4)
+          break
+        case 'rojo':
+          this.aplicarImpulso(base * 1.5 * signo, 4)
+          break
+        case 'azul': {
+          this.gravedadInvertida = !this.gravedadInvertida
+          const nuevoSigno = this.gravedadInvertida ? -1 : 1
+          // El pad azul sí da un leve impulso (a diferencia del orbe azul)
+          this.aplicarImpulso(base * nuevoSigno * 0.8, 4)
+          break
+        }
+        default:
+          this.aplicarImpulso(base * signo, 4)
+          break
+      }
+
       this.jugador.enSuelo = false
       this.jugador.saltosAire = 0
       t.animando = true
@@ -870,18 +948,58 @@ export class EndlessRunner {
     }
   }
 
-  colisionOrbe(o) {
-    if (o.activado) return false
+  // Los orbes solo se activan con la pulsación del jugador al estar en rango
+  // (no automáticamente al tocarlos) — se llama desde iniciarPresion().
+  // La Ola es el único modo incompatible con los orbes, igual que en GD real.
+  intentarActivarOrbes() {
+    if (this.modoActual === 'ola') return false
 
-    const jcx = this.jugador.x + this.jugador.ancho / 2
-    const jcy = this.jugador.y + this.jugador.alto / 2
-    const distancia = Math.sqrt((jcx - o.x) ** 2 + (jcy - o.y) ** 2)
+    let activoAlguno = false
 
-    if (distancia < o.radio + 16) {
+    for (const o of this.orbes) {
+      if (o.activado) continue
+
+      const jcx = this.jugador.x + this.jugador.ancho / 2
+      const jcy = this.jugador.y + this.jugador.alto / 2
+      const distancia = Math.sqrt((jcx - o.x) ** 2 + (jcy - o.y) ** 2)
+      if (distancia >= o.radio + 16) continue
+
       o.activado = true
-      this.aplicarImpulso(this.config.juego.altoDeSalto - 3, 3)
-      this.jugador.enSuelo = false
+      const signo = this.gravedadInvertida ? -1 : 1
+      const base = this.config.juego.altoDeSalto
 
+      switch (o.variante) {
+        case 'rosa':
+          this.aplicarImpulso(base * 0.55 * signo, 3)
+          this.jugador.enSuelo = false
+          break
+        case 'rojo':
+          this.aplicarImpulso(base * 1.5 * signo, 3)
+          this.jugador.enSuelo = false
+          break
+        case 'azul':
+          // Invierte gravedad sin impulso — la posición Y no cambia
+          this.gravedadInvertida = !this.gravedadInvertida
+          break
+        case 'verde': {
+          this.gravedadInvertida = !this.gravedadInvertida
+          const nuevoSigno = this.gravedadInvertida ? -1 : 1
+          this.aplicarImpulso(base * nuevoSigno, 3)
+          this.jugador.enSuelo = false
+          break
+        }
+        case 'negro':
+          // Impulso hacia la superficie actual (dirección de la gravedad)
+          this.aplicarImpulso(-base * signo, 3)
+          this.jugador.enSuelo = false
+          break
+        default:
+          this.aplicarImpulso(base * signo, 3)
+          this.jugador.enSuelo = false
+          break
+      }
+
+      const color = COLORES_ORBE[o.variante] || COLORES_ORBE.amarillo
       for (let i = 0; i < 8; i++) {
         this.particulas.push({
           x: o.x,
@@ -889,13 +1007,14 @@ export class EndlessRunner {
           vx: (Math.random() - 0.5) * 8,
           vy: (Math.random() - 0.5) * 8,
           vida: 1.0,
-          color: '#fde047',
+          color,
         })
       }
       audio.salto()
-      return true
+      activoAlguno = true
     }
-    return false
+
+    return activoAlguno
   }
 
   colisionMuroFragil(obs) {
@@ -940,10 +1059,6 @@ export class EndlessRunner {
   verificarColisiones() {
     for (const t of this.trampolin) {
       this.colisionTrampolin(t)
-    }
-
-    for (const o of this.orbes) {
-      this.colisionOrbe(o)
     }
 
     this.actualizarColisionPlataforma()
@@ -1378,15 +1493,17 @@ export class EndlessRunner {
   dibujarTrampolin(t) {
     const ctx = this.ctx
     const comprimir = t.animando ? Math.sin(t.frameAnimacion * 0.4) * 4 : 0
+    const color = COLORES_PAD[t.variante] || COLORES_PAD.amarillo
+    const icono = t.variante === 'azul' ? '⇅' : '↑'
 
-    ctx.fillStyle = '#22c55e'
+    ctx.fillStyle = color
     ctx.shadowBlur = 12
-    ctx.shadowColor = '#22c55e'
+    ctx.shadowColor = color
     ctx.beginPath()
     ctx.roundRect(t.x, t.y + comprimir, t.ancho, t.alto - comprimir, 4)
     ctx.fill()
 
-    ctx.strokeStyle = '#86efac'
+    ctx.strokeStyle = color + 'aa'
     ctx.lineWidth = 2
     ctx.shadowBlur = 0
     const segmentos = 4
@@ -1398,10 +1515,10 @@ export class EndlessRunner {
       ctx.stroke()
     }
 
-    ctx.fillStyle = '#22c55e'
+    ctx.fillStyle = color
     ctx.font = 'bold 14px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('↑', t.x + t.ancho / 2, t.y - 8)
+    ctx.fillText(icono, t.x + t.ancho / 2, t.y - 8)
     ctx.textAlign = 'left'
 
     if (t.animando) {
@@ -1441,6 +1558,9 @@ export class EndlessRunner {
     const ctx = this.ctx
     o.pulsacion += 0.08
     const escala = 1 + Math.sin(o.pulsacion) * 0.12
+    const color = COLORES_ORBE[o.variante] || COLORES_ORBE.amarillo
+    const iconos = { amarillo: '↑', rosa: '↑', rojo: '↑', azul: '⇄', verde: '⇄', negro: '↓' }
+    const icono = iconos[o.variante] || '↑'
 
     ctx.save()
     ctx.translate(o.x, o.y)
@@ -1448,14 +1568,14 @@ export class EndlessRunner {
 
     ctx.beginPath()
     ctx.arc(0, 0, o.radio + 6, 0, Math.PI * 2)
-    ctx.fillStyle = '#fde04722'
+    ctx.fillStyle = color + '22'
     ctx.fill()
 
     ctx.beginPath()
     ctx.arc(0, 0, o.radio, 0, Math.PI * 2)
-    ctx.fillStyle = '#fde047'
+    ctx.fillStyle = color
     ctx.shadowBlur = 18
-    ctx.shadowColor = '#fde047'
+    ctx.shadowColor = color
     ctx.fill()
 
     ctx.beginPath()
@@ -1464,11 +1584,11 @@ export class EndlessRunner {
     ctx.shadowBlur = 0
     ctx.fill()
 
-    ctx.fillStyle = '#78350f'
+    ctx.fillStyle = '#1f2937'
     ctx.font = `bold ${Math.round(o.radio)}px monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('↑', 0, 1)
+    ctx.fillText(icono, 0, 1)
     ctx.textBaseline = 'alphabetic'
     ctx.textAlign = 'left'
 
