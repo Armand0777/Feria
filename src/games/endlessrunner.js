@@ -616,20 +616,6 @@ export class EndlessRunner {
         altoSuelo,
         altoTecho,
       })
-    } else if (rand < 0.56 && !esPrincipiante) {
-      // Láser intermitente (mata solo cuando está encendido)
-      this.obstaculos.push({
-        tipo: 'laser',
-        x: this.canvas.width,
-        y: 0,
-        ancho: 14,
-        alto: this.canvas.height - SUELO_ALTO,
-        cicloEncendido: 45,
-        cicloApagado: 35,
-        cicloTimer: 0,
-        fase: Math.floor(Math.random() * 80),
-        encendido: false,
-      })
     } else if (rand < 0.64) {
       // Trampolín (siempre puede aparecer — es positivo)
       this.trampolin.push({
@@ -980,14 +966,6 @@ export class EndlessRunner {
         colision = this.colisionSierra(obs)
       } else if (obs.tipo === 'picoDoble') {
         colision = this.colisionPicoDoble(obs)
-      } else if (obs.tipo === 'laser') {
-        const margen = 4
-        colision =
-          obs.encendido &&
-          this.jugador.x + margen < obs.x + obs.ancho &&
-          this.jugador.x + this.jugador.ancho - margen > obs.x &&
-          this.jugador.y + margen < obs.y + obs.alto &&
-          this.jugador.y + this.jugador.alto - margen > obs.y
       } else {
         const margen = 4
         colision =
@@ -1048,13 +1026,7 @@ export class EndlessRunner {
     this.portalesModo.forEach((p) => (p.x -= this.velocidad))
 
     this.obstaculos.forEach((o) => {
-      if (o.tipo === 'sierra') {
-        o.rotacion += o.velocidadRotacion
-      } else if (o.tipo === 'laser') {
-        o.cicloTimer++
-        const ciclo = o.cicloEncendido + o.cicloApagado
-        o.encendido = (o.cicloTimer + o.fase) % ciclo < o.cicloEncendido
-      }
+      if (o.tipo === 'sierra') o.rotacion += o.velocidadRotacion
     })
 
     this.imanes.forEach((m) => {
@@ -1331,28 +1303,6 @@ export class EndlessRunner {
     ctx.shadowBlur = 0
   }
 
-  dibujarLaser(obs) {
-    const ctx = this.ctx
-    ctx.save()
-
-    if (obs.encendido) {
-      ctx.fillStyle = '#ef4444'
-      ctx.shadowBlur = 16
-      ctx.shadowColor = '#ef4444'
-      ctx.fillRect(obs.x, obs.y, obs.ancho, obs.alto)
-      ctx.fillStyle = '#fecaca'
-      ctx.fillRect(obs.x + obs.ancho / 2 - 1.5, obs.y, 3, obs.alto)
-    } else {
-      ctx.strokeStyle = '#ef444455'
-      ctx.lineWidth = 1.5
-      ctx.setLineDash([3, 5])
-      ctx.strokeRect(obs.x, obs.y, obs.ancho, obs.alto)
-      ctx.setLineDash([])
-    }
-
-    ctx.restore()
-  }
-
   dibujarMuroFragil(obs) {
     const ctx = this.ctx
     ctx.save()
@@ -1418,9 +1368,6 @@ export class EndlessRunner {
         break
       case 'picoDoble':
         this.dibujarPicoDoble(obs)
-        break
-      case 'laser':
-        this.dibujarLaser(obs)
         break
       case 'muroFragil':
         this.dibujarMuroFragil(obs)
