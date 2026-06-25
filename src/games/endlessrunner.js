@@ -718,6 +718,72 @@ export class EndlessRunner {
     }
   }
 
+  // Colisión triangular real para el pico de suelo: el rectángulo que
+  // encierra al triángulo no cuenta como sólido completo — solo mata si el
+  // jugador realmente entra en el área triangular (puedes pasar "rozando"
+  // la punta sin morir, como en Geometry Dash).
+  colisionPico(obs) {
+    const j = this.jugador
+    const margen = 4
+    const jx1 = j.x + margen
+    const jx2 = j.x + j.ancho - margen
+    const jy1 = j.y + margen
+    const jy2 = j.y + j.alto - margen
+
+    if (jx2 < obs.x || jx1 > obs.x + obs.ancho || jy2 < obs.y || jy1 > obs.y + obs.alto) {
+      return false
+    }
+
+    const apiceX = obs.x + obs.ancho / 2
+    const apiceY = obs.y
+    const baseY = obs.y + obs.alto
+    const puntoX = Math.min(jx2, Math.max(jx1, j.x + j.ancho / 2))
+    const puntoY = jy2
+
+    let lineaY
+    if (puntoX < apiceX) {
+      const t = (puntoX - obs.x) / (apiceX - obs.x)
+      lineaY = baseY + (apiceY - baseY) * t
+    } else {
+      const t = (puntoX - apiceX) / (obs.x + obs.ancho - apiceX)
+      lineaY = apiceY + (baseY - apiceY) * t
+    }
+
+    return puntoY >= lineaY
+  }
+
+  // Mismo principio que colisionPico() pero para el pico que cuelga del
+  // techo (apunta hacia abajo).
+  colisionSpikeTop(obs) {
+    const j = this.jugador
+    const margen = 4
+    const jx1 = j.x + margen
+    const jx2 = j.x + j.ancho - margen
+    const jy1 = j.y + margen
+    const jy2 = j.y + j.alto - margen
+
+    if (jx2 < obs.x || jx1 > obs.x + obs.ancho || jy2 < obs.y || jy1 > obs.y + obs.alto) {
+      return false
+    }
+
+    const apiceX = obs.x + obs.ancho / 2
+    const apiceY = obs.y + obs.alto
+    const baseY = obs.y
+    const puntoX = Math.min(jx2, Math.max(jx1, j.x + j.ancho / 2))
+    const puntoY = jy1
+
+    let lineaY
+    if (puntoX < apiceX) {
+      const t = (puntoX - obs.x) / (apiceX - obs.x)
+      lineaY = baseY + (apiceY - baseY) * t
+    } else {
+      const t = (puntoX - apiceX) / (obs.x + obs.ancho - apiceX)
+      lineaY = apiceY + (baseY - apiceY) * t
+    }
+
+    return puntoY <= lineaY
+  }
+
   colisionSierra(obs) {
     const cx = obs.x + obs.radio
     const cy = obs.y + obs.radio
@@ -878,7 +944,11 @@ export class EndlessRunner {
     for (const obs of this.obstaculos) {
       let colision = false
 
-      if (obs.tipo === 'sierra') {
+      if (obs.tipo === 'pico') {
+        colision = this.colisionPico(obs)
+      } else if (obs.tipo === 'spikeTop') {
+        colision = this.colisionSpikeTop(obs)
+      } else if (obs.tipo === 'sierra') {
         colision = this.colisionSierra(obs)
       } else if (obs.tipo === 'picoDoble') {
         colision = this.colisionPicoDoble(obs)

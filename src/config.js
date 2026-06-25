@@ -16,7 +16,7 @@ const config = {
     // Fuerza de gravedad aplicada al cubo en cada frame
     gravedad: 0.55,
     // Velocidad vertical aplicada al saltar (salto fijo, negativa = hacia arriba)
-    altoDeSalto: -13,
+    altoDeSalto: -9.5,
   },
 }
 

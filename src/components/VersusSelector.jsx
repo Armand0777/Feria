@@ -3,13 +3,13 @@ import { MODOS } from '../games/endlessrunner'
 
 const defaultJ1 = {
   jugador: { nombre: 'Jugador 1', color: '#6366f1', colorFondo: '#0a0a1a' },
-  juego: { velocidadInicial: 5, gravedad: 0.55, altoDeSalto: -13 },
+  juego: { velocidadInicial: 5, gravedad: 0.55, altoDeSalto: -9.5 },
   modoInicial: 'cubo',
 }
 
 const defaultJ2 = {
   jugador: { nombre: 'Jugador 2', color: '#f97316', colorFondo: '#0a0a1a' },
-  juego: { velocidadInicial: 5, gravedad: 0.55, altoDeSalto: -13 },
+  juego: { velocidadInicial: 5, gravedad: 0.55, altoDeSalto: -9.5 },
   modoInicial: 'cubo',
 }
 
