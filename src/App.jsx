@@ -10,6 +10,7 @@ import VersusCanvas from './components/VersusCanvas'
 import ResultadoVersus from './pages/ResultadoVersus'
 import Ranking from './components/Ranking'
 import RankingTV from './pages/RankingTV'
+import CodigoQR from './components/CodigoQR'
 
 function App() {
   // Si la URL contiene /ranking-tv, mostrar solo esa pantalla
@@ -176,6 +177,8 @@ function App() {
           </div>
         )}
       </div>
+
+      <CodigoQR />
     </div>
   )
 }

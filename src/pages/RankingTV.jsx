@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import CodigoQR from '../components/CodigoQR'
 import './RankingTV.css'
 
 const MENSAJES = [
@@ -208,6 +209,8 @@ export default function RankingTV() {
           <div key={mensajeIndex} className="barra-progreso h-full rounded-full" style={{ background: '#6366f1' }} />
         </div>
       </footer>
+
+      <CodigoQR tamano={90} />
     </div>
   )
 }
