@@ -365,6 +365,7 @@ export class EndlessRunner {
     this.trampolin = []
     this.imanes = []
     this.slopes = []
+    this.pozos = []
     this.sobrePlataforma = false
     this.plataformaActual = null
     this.squashTimer = 0
@@ -633,16 +634,24 @@ export class EndlessRunner {
     })
   }
 
+  // ¿El jugador está en una zona X donde el suelo no existe (pozo)?
+  estaSobrePozo() {
+    return this.pozos.some(
+      (p) => this.jugador.x + this.jugador.ancho > p.x && this.jugador.x < p.x + p.ancho,
+    )
+  }
+
   aplicarLimites() {
     const j = this.jugador
     const suelo = this.canvas.height - SUELO_ALTO - j.alto
+    const sobrePozo = this.estaSobrePozo()
 
     if (this.modoActual === 'bola') {
       // La bola se posa en la superficie (como el cubo) y solo cambia de
       // dirección por el tap del jugador — no rebota sola al tocar el suelo
       const estabaEnSuelo = j.enSuelo
       if (!this.gravedadInvertida) {
-        if (j.y >= suelo) {
+        if (j.y >= suelo && !sobrePozo) {
           j.y = suelo
           j.velocidadY = 0
           j.enSuelo = true
@@ -664,7 +673,7 @@ export class EndlessRunner {
       if (j.y < TECHO) j.y = TECHO
       if (j.y > max) j.y = max
     } else if (!this.gravedadInvertida) {
-      if (j.y >= suelo) {
+      if (j.y >= suelo && !sobrePozo) {
         j.y = suelo
         j.velocidadY = 0
         j.enSuelo = true
@@ -710,17 +719,13 @@ export class EndlessRunner {
     }
 
     const rand = Math.random()
+    const techoY = TECHO
 
-    if (rand < 0.14) {
+    // — Disponibles desde el nivel Fácil (sin gate de esPrincipiante) —
+    if (rand < 0.1) {
       // Pico simple
-      this.obstaculos.push({
-        tipo: 'pico',
-        x: this.canvas.width,
-        y: suelo - 50,
-        ancho: 40,
-        alto: 50,
-      })
-    } else if (rand < 0.24) {
+      this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
+    } else if (rand < 0.18) {
       // Bloque doble
       this.obstaculos.push({
         tipo: 'bloqueDoble',
@@ -729,61 +734,76 @@ export class EndlessRunner {
         ancho: 34,
         alto: 68,
       })
-    } else if (rand < 0.4 && !esPrincipiante) {
-      // Sierra circular (no en modo principiante)
-      const radio = 22 + Math.random() * 12
+    } else if (rand < 0.23) {
+      // Bloque triple — pared más alta, exige un salto bien cargado
+      this.obstaculos.push({
+        tipo: 'bloqueTriple',
+        x: this.canvas.width,
+        y: suelo - 84,
+        ancho: 34,
+        alto: 84,
+      })
+    } else if (rand < 0.29) {
+      // Pico colgante del techo
+      this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, ancho: 40, alto: 50 })
+    } else if (rand < 0.34) {
+      // Sierra de techo — misma sierra de siempre, pegada arriba
+      const radio = 20 + Math.random() * 10
+      this.obstaculos.push({
+        tipo: 'sierra',
+        x: this.canvas.width,
+        y: techoY,
+        radio,
+        rotacion: 0,
+        velocidadRotacion: 0.05 + Math.random() * 0.04,
+      })
+    } else if (rand < 0.39) {
+      // Bloque colgante del techo
+      this.obstaculos.push({ tipo: 'bloque', x: this.canvas.width, y: techoY, ancho: 34, alto: 50 })
+    } else if (rand < 0.44) {
+      // Bloque flotante en pleno aire — letal por cualquier lado, no es plataforma
+      this.obstaculos.push({
+        tipo: 'bloqueFlotante',
+        x: this.canvas.width,
+        y: 90 + Math.random() * 90,
+        ancho: 34,
+        alto: 34,
+      })
+    } else if (rand < 0.49) {
+      // Ventana: un marco flotante — solo es seguro pasar por el hueco central
+      this.obstaculos.push({
+        tipo: 'ventana',
+        x: this.canvas.width,
+        y: 80 + Math.random() * 70,
+        ancho: 70,
+        alto: 110,
+        grosor: 14,
+      })
+    } else if (rand < 0.53) {
+      // Sierra doble vertical: una arriba, una abajo, se pasa por el medio
+      const radio = 20
+      this.obstaculos.push({
+        tipo: 'sierra',
+        x: this.canvas.width,
+        y: techoY,
+        radio,
+        rotacion: 0,
+        velocidadRotacion: 0.06,
+      })
       this.obstaculos.push({
         tipo: 'sierra',
         x: this.canvas.width,
         y: suelo - radio * 2,
         radio,
         rotacion: 0,
-        velocidadRotacion: 0.05 + Math.random() * 0.04,
+        velocidadRotacion: 0.06,
       })
-    } else if (rand < 0.48 && !esPrincipiante) {
-      // Pico doble techo + suelo
-      let altoSuelo = 45 + Math.random() * 25
-      const altoTecho = 40 + Math.random() * 20
-      const huecoMinimo = 80
-      const alturaDisponible = this.canvas.height - SUELO_ALTO
-      const huecoReal = alturaDisponible - altoSuelo - altoTecho
-      if (huecoReal < huecoMinimo) altoSuelo = alturaDisponible - altoTecho - huecoMinimo
-
-      this.obstaculos.push({
-        tipo: 'picoDoble',
-        x: this.canvas.width,
-        anchoBase: 44,
-        altoSuelo,
-        altoTecho,
-      })
-    } else if (rand < 0.56 && !esPrincipiante) {
-      // Picos triples — la estructura más icónica de GD: con un salto normal
-      // se libran los 3 juntos, pero hay que saltar EXACTAMENTE a tiempo
-      for (let i = 0; i < 3; i++) {
-        this.obstaculos.push({
-          tipo: 'pico',
-          x: this.canvas.width + i * 40,
-          y: suelo - 50,
-          ancho: 40,
-          alto: 50,
-        })
-      }
-    } else if (rand < 0.64 && !esPrincipiante) {
-      // Pendiente (slope): rampa sólida de 45° en la que el jugador se
-      // desliza por encima — mata si la toca de costado o por abajo
-      const direccion = Math.random() < 0.5 ? 1 : -1
-      this.slopes.push({
-        tipo: 'slope',
-        x: this.canvas.width,
-        anchoBase: 70,
-        altoMax: 38,
-        direccion,
-      })
-    } else if (rand < 0.72) {
+    } else if (rand < 0.57) {
+      // Pozo: un tramo sin suelo — hay que saltarlo o cruzar volando
+      this.pozos.push({ tipo: 'pozo', x: this.canvas.width, ancho: 90 + Math.random() * 40 })
+    } else if (rand < 0.65) {
       // Pad automático (siempre puede aparecer — es positivo, no requiere input)
-      const variantes = esPrincipiante
-        ? ['amarillo']
-        : ['amarillo', 'rosa', 'rojo', 'azul']
+      const variantes = esPrincipiante ? ['amarillo'] : ['amarillo', 'rosa', 'rojo', 'azul']
       const variante = variantes[Math.floor(Math.random() * variantes.length)]
       this.trampolin.push({
         tipo: 'trampolin',
@@ -795,7 +815,45 @@ export class EndlessRunner {
         animando: false,
         frameAnimacion: 0,
       })
-    } else if (rand < 0.8 && !esPrincipiante) {
+    }
+    // — Obstáculos complejos: solo a partir del umbral de cada nivel —
+    else if (rand < 0.71 && !esPrincipiante) {
+      // Sierra circular de suelo
+      const radio = 22 + Math.random() * 12
+      this.obstaculos.push({
+        tipo: 'sierra',
+        x: this.canvas.width,
+        y: suelo - radio * 2,
+        radio,
+        rotacion: 0,
+        velocidadRotacion: 0.05 + Math.random() * 0.04,
+      })
+    } else if (rand < 0.77 && !esPrincipiante) {
+      // Pico doble techo + suelo
+      let altoSuelo = 45 + Math.random() * 25
+      const altoTecho = 40 + Math.random() * 20
+      const huecoMinimo = 80
+      const alturaDisponible = this.canvas.height - SUELO_ALTO
+      const huecoReal = alturaDisponible - altoSuelo - altoTecho
+      if (huecoReal < huecoMinimo) altoSuelo = alturaDisponible - altoTecho - huecoMinimo
+
+      this.obstaculos.push({ tipo: 'picoDoble', x: this.canvas.width, anchoBase: 44, altoSuelo, altoTecho })
+    } else if (rand < 0.82 && !esPrincipiante) {
+      // Picos triples — la estructura más icónica de GD
+      for (let i = 0; i < 3; i++) {
+        this.obstaculos.push({
+          tipo: 'pico',
+          x: this.canvas.width + i * 40,
+          y: suelo - 50,
+          ancho: 40,
+          alto: 50,
+        })
+      }
+    } else if (rand < 0.87 && !esPrincipiante) {
+      // Pendiente (slope): rampa sólida de 45°
+      const direccion = Math.random() < 0.5 ? 1 : -1
+      this.slopes.push({ tipo: 'slope', x: this.canvas.width, anchoBase: 70, altoMax: 38, direccion })
+    } else if (rand < 0.9 && !esPrincipiante) {
       // Plataforma móvil
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
@@ -810,8 +868,8 @@ export class EndlessRunner {
         fase: Math.random() * Math.PI * 2,
         frameCount: 0,
       })
-    } else if (rand < 0.86 && !esPrincipiante) {
-      // Orbe — requiere que el jugador presione al tocarlo (no es automático)
+    } else if (rand < 0.94 && !esPrincipiante) {
+      // Orbe — requiere que el jugador presione al tocarlo
       const variantes = ['amarillo', 'rosa', 'rojo', 'azul', 'verde', 'negro']
       const variante = variantes[Math.floor(Math.random() * variantes.length)]
       this.orbes.push({
@@ -823,34 +881,15 @@ export class EndlessRunner {
         pulsacion: 0,
         activado: false,
       })
-    } else if (rand < 0.92 && !esPrincipiante) {
-      // Imán invertido: no mata, desestabiliza atrayendo al jugador hacia su centro
-      this.imanes.push({
-        tipo: 'iman',
-        x: this.canvas.width,
-        y: this.canvas.height / 2,
-        radio: 70,
-        pulsacion: 0,
-      })
     } else if (rand < 0.97 && !esPrincipiante) {
-      // Muro frágil: se rompe si cae encima (plataforma de un solo uso),
-      // mata si lo toca de costado
-      this.obstaculos.push({
-        tipo: 'muroFragil',
-        x: this.canvas.width,
-        y: suelo - 40,
-        ancho: 36,
-        alto: 40,
-      })
+      // Imán invertido: no mata, desestabiliza
+      this.imanes.push({ tipo: 'iman', x: this.canvas.width, y: this.canvas.height / 2, radio: 70, pulsacion: 0 })
+    } else if (!esPrincipiante) {
+      // Muro frágil: se rompe si cae encima, mata si lo toca de costado
+      this.obstaculos.push({ tipo: 'muroFragil', x: this.canvas.width, y: suelo - 40, ancho: 36, alto: 40 })
     } else {
       // Pico simple de respaldo
-      this.obstaculos.push({
-        tipo: 'pico',
-        x: this.canvas.width,
-        y: suelo - 50,
-        ancho: 40,
-        alto: 50,
-      })
+      this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
     }
   }
 
@@ -1147,6 +1186,27 @@ export class EndlessRunner {
     return colSuelo || colTecho
   }
 
+  // Ventana: el marco mata, el hueco interior es completamente seguro
+  colisionVentana(obs) {
+    const j = this.jugador
+    const margen = 4
+    const jx1 = j.x + margen
+    const jx2 = j.x + j.ancho - margen
+    const jy1 = j.y + margen
+    const jy2 = j.y + j.alto - margen
+
+    const enExterior = jx2 > obs.x && jx1 < obs.x + obs.ancho && jy2 > obs.y && jy1 < obs.y + obs.alto
+    if (!enExterior) return false
+
+    const ix1 = obs.x + obs.grosor
+    const ix2 = obs.x + obs.ancho - obs.grosor
+    const iy1 = obs.y + obs.grosor
+    const iy2 = obs.y + obs.alto - obs.grosor
+    const dentroDelHueco = jx1 >= ix1 && jx2 <= ix2 && jy1 >= iy1 && jy2 <= iy2
+
+    return !dentroDelHueco
+  }
+
   colisionTrampolin(t) {
     const cayendo = this.jugador.velocidadY > 0
     const enX = this.jugador.x + this.jugador.ancho > t.x && this.jugador.x < t.x + t.ancho
@@ -1385,6 +1445,8 @@ export class EndlessRunner {
         colision = this.colisionSierra(obs)
       } else if (obs.tipo === 'picoDoble') {
         colision = this.colisionPicoDoble(obs)
+      } else if (obs.tipo === 'ventana') {
+        colision = this.colisionVentana(obs)
       } else {
         const margen = 4
         colision =
@@ -1469,6 +1531,11 @@ export class EndlessRunner {
     })
     this.slopes = this.slopes.filter((s) => s.x + s.anchoBase > 0)
 
+    this.pozos.forEach((p) => {
+      p.x -= this.velocidad
+    })
+    this.pozos = this.pozos.filter((p) => p.x + p.ancho > 0)
+
     if (this.squashTimer > 0) this.squashTimer--
 
     this.trampolin.forEach((t) => {
@@ -1528,7 +1595,14 @@ export class EndlessRunner {
     if (this.mensajeModoTimer > 0) this.mensajeModoTimer--
     else this.mensajeModo = null
 
-    this.verificarColisiones()
+    // Caer fuera de la pantalla por un pozo también mata (igual que en GD)
+    if (!this.terminado && this.jugador.y > this.canvas.height + 20) {
+      this.terminado = true
+      audio.muerte()
+      this.generarParticulas()
+    }
+
+    if (!this.terminado) this.verificarColisiones()
   }
 
   dibujarFondo() {
@@ -1613,6 +1687,25 @@ export class EndlessRunner {
     ctx.lineTo(w, h - SUELO_ALTO)
     ctx.stroke()
     ctx.restore()
+
+    // Pozos: se "borra" el suelo en ese tramo para mostrar el vacío
+    this.pozos.forEach((p) => {
+      ctx.fillStyle = this.config.jugador.colorFondo
+      ctx.fillRect(p.x, h - SUELO_ALTO, p.ancho, SUELO_ALTO)
+
+      ctx.save()
+      ctx.shadowBlur = 10
+      ctx.shadowColor = '#ef4444'
+      ctx.strokeStyle = '#ef444499'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(p.x, h - SUELO_ALTO)
+      ctx.lineTo(p.x, h)
+      ctx.moveTo(p.x + p.ancho, h - SUELO_ALTO)
+      ctx.lineTo(p.x + p.ancho, h)
+      ctx.stroke()
+      ctx.restore()
+    })
   }
 
   dibujarPico(obs) {
@@ -1669,6 +1762,65 @@ export class EndlessRunner {
     ctx.beginPath()
     ctx.roundRect(obs.x, obs.y + 34, 34, 34, 6)
     ctx.fill()
+    ctx.restore()
+  }
+
+  dibujarBloqueTriple(obs) {
+    const ctx = this.ctx
+    const segAlto = obs.alto / 3
+    ctx.save()
+    ctx.shadowBlur = 10
+    ctx.shadowColor = '#a855f7'
+    ctx.fillStyle = '#a855f7'
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath()
+      ctx.roundRect(obs.x, obs.y + i * segAlto, obs.ancho, segAlto - 2, 5)
+      ctx.fill()
+    }
+    ctx.restore()
+  }
+
+  dibujarBloqueFlotante(obs) {
+    const ctx = this.ctx
+    ctx.save()
+    ctx.shadowBlur = 12
+    ctx.shadowColor = '#ec4899'
+    ctx.fillStyle = '#ec4899'
+    ctx.beginPath()
+    ctx.roundRect(obs.x, obs.y, obs.ancho, obs.alto, 6)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+    ctx.lineWidth = 1.5
+    ctx.shadowBlur = 0
+    ctx.beginPath()
+    ctx.moveTo(obs.x + 6, obs.y + 6)
+    ctx.lineTo(obs.x + obs.ancho - 6, obs.y + obs.alto - 6)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  dibujarVentana(obs) {
+    const ctx = this.ctx
+    ctx.save()
+    ctx.shadowBlur = 14
+    ctx.shadowColor = '#22d3ee'
+    ctx.strokeStyle = '#22d3ee'
+    ctx.lineWidth = obs.grosor
+    ctx.strokeRect(
+      obs.x + obs.grosor / 2,
+      obs.y + obs.grosor / 2,
+      obs.ancho - obs.grosor,
+      obs.alto - obs.grosor,
+    )
+    ctx.shadowBlur = 0
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'
+    ctx.lineWidth = 1
+    ctx.strokeRect(
+      obs.x + obs.grosor,
+      obs.y + obs.grosor,
+      obs.ancho - obs.grosor * 2,
+      obs.alto - obs.grosor * 2,
+    )
     ctx.restore()
   }
 
@@ -1850,6 +2002,15 @@ export class EndlessRunner {
         break
       case 'muroFragil':
         this.dibujarMuroFragil(obs)
+        break
+      case 'bloqueTriple':
+        this.dibujarBloqueTriple(obs)
+        break
+      case 'bloqueFlotante':
+        this.dibujarBloqueFlotante(obs)
+        break
+      case 'ventana':
+        this.dibujarVentana(obs)
         break
     }
   }
