@@ -377,6 +377,7 @@ export class EndlessRunner {
     this.slopes = []
     this.pozos = []
     this.pinzas = []
+    this.contadorTecho = 0
     this.sobrePlataforma = false
     this.plataformaActual = null
     this.squashTimer = 0
@@ -724,6 +725,16 @@ export class EndlessRunner {
     const suelo = this.canvas.height - SUELO_ALTO
     const esPrincipiante = this.puntaje < this.nivelCfg.umbralComplejos
     const combosDisponibles = this.nivelCfg.combos
+    const techoY = TECHO
+
+    // Anti-sequía: si llevamos varias generaciones seguidas sin nada en el
+    // techo, forzamos la siguiente a ser un obstáculo de techo — evita que
+    // el jugador se quede mucho tiempo sin nada que esquivar arriba
+    if (!esPrincipiante && this.contadorTecho >= 5) {
+      this.generarObstaculoTechoForzado(techoY, suelo)
+      this.contadorTecho = 0
+      return
+    }
 
     if (!esPrincipiante && combosDisponibles.length > 0 && Math.random() < 0.22) {
       const id = combosDisponibles[Math.floor(Math.random() * combosDisponibles.length)]
@@ -732,7 +743,7 @@ export class EndlessRunner {
     }
 
     const rand = Math.random()
-    const techoY = TECHO
+    let tocoTecho = false
 
     // — Disponibles desde el nivel Fácil (sin gate de esPrincipiante) —
     if (rand < 0.1) {
@@ -758,9 +769,11 @@ export class EndlessRunner {
       })
     } else if (rand < 0.29) {
       // Pico colgante del techo
+      tocoTecho = true
       this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, ancho: 40, alto: 50 })
     } else if (rand < 0.34) {
       // Sierra de techo — misma sierra de siempre, pegada arriba
+      tocoTecho = true
       const radio = 20 + Math.random() * 10
       this.obstaculos.push({
         tipo: 'sierra',
@@ -772,6 +785,7 @@ export class EndlessRunner {
       })
     } else if (rand < 0.39) {
       // Bloque colgante del techo
+      tocoTecho = true
       this.obstaculos.push({ tipo: 'bloque', x: this.canvas.width, y: techoY, ancho: 34, alto: 50 })
     } else if (rand < 0.44) {
       // Bloque flotante en pleno aire — letal por cualquier lado, no es plataforma
@@ -794,6 +808,7 @@ export class EndlessRunner {
       })
     } else if (rand < 0.53) {
       // Sierra doble vertical: una arriba, una abajo, se pasa por el medio
+      tocoTecho = true
       const radio = 20
       this.obstaculos.push({
         tipo: 'sierra',
@@ -830,7 +845,7 @@ export class EndlessRunner {
       })
     }
     // — Obstáculos complejos: solo a partir del umbral de cada nivel —
-    else if (rand < 0.71 && !esPrincipiante) {
+    else if (rand < 0.7 && !esPrincipiante) {
       // Sierra circular de suelo
       const radio = 22 + Math.random() * 12
       this.obstaculos.push({
@@ -841,8 +856,9 @@ export class EndlessRunner {
         rotacion: 0,
         velocidadRotacion: 0.05 + Math.random() * 0.04,
       })
-    } else if (rand < 0.77 && !esPrincipiante) {
+    } else if (rand < 0.75 && !esPrincipiante) {
       // Pico doble techo + suelo
+      tocoTecho = true
       let altoSuelo = 45 + Math.random() * 25
       const altoTecho = 40 + Math.random() * 20
       const huecoMinimo = 80
@@ -851,7 +867,7 @@ export class EndlessRunner {
       if (huecoReal < huecoMinimo) altoSuelo = alturaDisponible - altoTecho - huecoMinimo
 
       this.obstaculos.push({ tipo: 'picoDoble', x: this.canvas.width, anchoBase: 44, altoSuelo, altoTecho })
-    } else if (rand < 0.82 && !esPrincipiante) {
+    } else if (rand < 0.79 && !esPrincipiante) {
       // Picos triples — la estructura más icónica de GD
       for (let i = 0; i < 3; i++) {
         this.obstaculos.push({
@@ -862,11 +878,28 @@ export class EndlessRunner {
           alto: 50,
         })
       }
-    } else if (rand < 0.87 && !esPrincipiante) {
+    } else if (rand < 0.83 && !esPrincipiante) {
       // Pendiente (slope): rampa sólida de 45°
       const direccion = Math.random() < 0.5 ? 1 : -1
       this.slopes.push({ tipo: 'slope', x: this.canvas.width, anchoBase: 70, altoMax: 38, direccion })
-    } else if (rand < 0.89 && !esPrincipiante) {
+    } else if (rand < 0.845 && !esPrincipiante) {
+      // Pinchos en zigzag — varios picos de techo alternando alto/bajo,
+      // nunca pasan de la mitad de la pantalla
+      tocoTecho = true
+      this.generarPinchosZigzag(techoY)
+    } else if (rand < 0.86 && !esPrincipiante) {
+      // Láser de techo intermitente: visible = letal, apagado = seguro
+      tocoTecho = true
+      this.generarLaserIntermitente()
+    } else if (rand < 0.87 && !esPrincipiante) {
+      // Péndulo: bola que cuelga del techo y oscila de lado a lado
+      tocoTecho = true
+      this.generarPendulo()
+    } else if (rand < 0.88 && !esPrincipiante) {
+      // Bloque en picada: avisa parpadeando y luego cae, sin llegar al suelo
+      tocoTecho = true
+      this.generarBloqueCayendo()
+    } else if (rand < 0.9 && !esPrincipiante) {
       // Plataforma móvil
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
@@ -881,7 +914,7 @@ export class EndlessRunner {
         fase: Math.random() * Math.PI * 2,
         frameCount: 0,
       })
-    } else if (rand < 0.91 && !esPrincipiante) {
+    } else if (rand < 0.92 && !esPrincipiante) {
       // Plataforma intermitente: aparece y desaparece en ciclos — solo
       // sirve de apoyo mientras está visible
       const yBase = 70 + Math.random() * 120
@@ -902,7 +935,7 @@ export class EndlessRunner {
         cicloVisible: 70,
         cicloInvisible: 40,
       })
-    } else if (rand < 0.93 && !esPrincipiante) {
+    } else if (rand < 0.94 && !esPrincipiante) {
       // Orbe — requiere que el jugador presione al tocarlo
       const variantes = ['amarillo', 'rosa', 'rojo', 'azul', 'verde', 'negro']
       const variante = variantes[Math.floor(Math.random() * variantes.length)]
@@ -915,10 +948,10 @@ export class EndlessRunner {
         pulsacion: 0,
         activado: false,
       })
-    } else if (rand < 0.945 && !esPrincipiante) {
+    } else if (rand < 0.955 && !esPrincipiante) {
       // Imán invertido: no mata, desestabiliza
       this.imanes.push({ tipo: 'iman', x: this.canvas.width, y: this.canvas.height / 2, radio: 70, pulsacion: 0 })
-    } else if (rand < 0.95 && !esPrincipiante) {
+    } else if (rand < 0.96 && !esPrincipiante) {
       // Muro frágil: se rompe si cae encima, mata si lo toca de costado
       this.obstaculos.push({ tipo: 'muroFragil', x: this.canvas.width, y: suelo - 40, ancho: 36, alto: 40 })
     } else if (rand < 0.98 && !esPrincipiante) {
@@ -941,6 +974,7 @@ export class EndlessRunner {
 
       if (Math.random() < 0.5) {
         // Variante de techo
+        tocoTecho = true
         this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, alto: 50, ...cicloComun })
       } else {
         // Variante de suelo — sube desde abajo en vez de bajar del techo
@@ -975,6 +1009,7 @@ export class EndlessRunner {
     } else if (!esPrincipiante) {
       // Pinza: dos bloques (techo y suelo) cuyo hueco central se abre y
       // se cierra con el tiempo — hay que cruzar cuando está más abierto
+      tocoTecho = true
       this.pinzas.push({
         tipo: 'pinza',
         x: this.canvas.width,
@@ -989,6 +1024,109 @@ export class EndlessRunner {
       // Pico simple de respaldo
       this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
     }
+
+    if (!esPrincipiante) {
+      this.contadorTecho = tocoTecho ? 0 : this.contadorTecho + 1
+    }
+  }
+
+  // Pinchos de techo en zigzag: alternan alto/bajo, nunca pasan de la
+  // mitad de la pantalla (mismo límite que la guillotina)
+  generarPinchosZigzag(techoY) {
+    const alturas = [35, 65, 35, 65]
+    alturas.forEach((alto, i) => {
+      this.obstaculos.push({
+        tipo: 'spikeTop',
+        x: this.canvas.width + i * 40,
+        y: techoY,
+        ancho: 40,
+        alto,
+      })
+    })
+  }
+
+  // Franja láser que cuelga del techo y parpadea: visible = letal, apagada
+  // = segura. Su borde inferior nunca pasa de la mitad de la pantalla.
+  generarLaserIntermitente() {
+    const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+    const altoMax = alturaDisponible * 0.5
+    this.obstaculos.push({
+      tipo: 'laser',
+      x: this.canvas.width,
+      y: TECHO + 20 + Math.random() * (altoMax - 30),
+      ancho: 90,
+      alto: 8,
+      cicloTimer: Math.floor(Math.random() * 50),
+      cicloVisible: 45,
+      cicloInvisible: 55,
+      visible: true,
+    })
+  }
+
+  // Péndulo: bola que cuelga del techo y oscila de lado a lado — su
+  // longitud está limitada para que nunca alcance más de la mitad de la
+  // pantalla, dejando siempre un hueco seguro abajo.
+  generarPendulo() {
+    const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+    const largo = alturaDisponible * (0.3 + Math.random() * 0.2)
+    const radio = 14
+    this.obstaculos.push({
+      tipo: 'sierra',
+      pendulo: true,
+      anclaX: this.canvas.width,
+      anclaY: TECHO,
+      largo,
+      anguloPendulo: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.3),
+      velocidadPendulo: 0.025 + Math.random() * 0.015,
+      x: this.canvas.width,
+      y: TECHO + largo,
+      radio,
+      rotacion: 0,
+      velocidadRotacion: 0.08,
+    })
+  }
+
+  // Bloque que cuelga del techo, avisa parpadeando un instante y luego cae
+  // — pero se detiene antes de llegar a la mitad de la pantalla, así que
+  // siempre queda un hueco abajo para pasar.
+  generarBloqueCayendo() {
+    const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+    const caidaMax = alturaDisponible * 0.5
+    this.obstaculos.push({
+      tipo: 'bloque',
+      x: this.canvas.width,
+      y: TECHO,
+      ancho: 34,
+      alto: 36,
+      cayendo: true,
+      alertaTimer: 35,
+      yObjetivo: TECHO + caidaMax,
+      velocidadCaida: 0,
+    })
+  }
+
+  // Elegido al azar cuando llevamos demasiadas generaciones sin nada en el
+  // techo — garantiza que nunca pase mucho tiempo sin un obstáculo arriba.
+  generarObstaculoTechoForzado(techoY, suelo) {
+    const opciones = [
+      () => this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, ancho: 40, alto: 50 }),
+      () => {
+        const radio = 20 + Math.random() * 10
+        this.obstaculos.push({
+          tipo: 'sierra',
+          x: this.canvas.width,
+          y: techoY,
+          radio,
+          rotacion: 0,
+          velocidadRotacion: 0.05 + Math.random() * 0.04,
+        })
+      },
+      () => this.generarPinchosZigzag(techoY),
+      () => this.generarLaserIntermitente(),
+      () => this.generarPendulo(),
+      () => this.generarBloqueCayendo(),
+    ]
+    opciones[Math.floor(Math.random() * opciones.length)]()
   }
 
   // Obstáculos compuestos: combinan elementos ya existentes en patrones más
@@ -1558,6 +1696,8 @@ export class EndlessRunner {
     })
 
     for (const obs of this.obstaculos) {
+      if (obs.tipo === 'laser' && !obs.visible) continue
+
       let colision = false
 
       if (obs.tipo === 'pico') {
@@ -1660,7 +1800,33 @@ export class EndlessRunner {
           o.centroX -= this.velocidad
           o.x = o.centroX + Math.cos(o.anguloOrbita) * o.radioOrbita - o.radio
           o.y = o.centroY + Math.sin(o.anguloOrbita) * o.radioOrbita - o.radio
+        } else if (o.pendulo) {
+          // Péndulo: la bola oscila colgada de un punto fijo del techo —
+          // el ancla también avanza con el nivel
+          o.anguloPendulo += o.velocidadPendulo
+          o.anclaX -= this.velocidad
+          const angulo = Math.sin(o.anguloPendulo) * 1.1
+          o.x = o.anclaX + Math.sin(angulo) * o.largo - o.radio
+          o.y = o.anclaY + Math.cos(angulo) * o.largo - o.radio
         }
+      } else if (o.tipo === 'bloque' && o.cayendo) {
+        // Bloque en picada: parpadea de advertencia y luego cae, pero se
+        // detiene antes de la mitad de la pantalla (nunca llega al suelo)
+        if (o.alertaTimer > 0) {
+          o.alertaTimer--
+        } else {
+          o.velocidadCaida += 0.6
+          o.y += o.velocidadCaida
+          if (o.y >= o.yObjetivo) {
+            o.y = o.yObjetivo
+            o.velocidadCaida = 0
+          }
+        }
+      } else if (o.tipo === 'laser') {
+        // Láser intermitente: visible = letal, apagado = seguro
+        o.cicloTimer++
+        const total = o.cicloVisible + o.cicloInvisible
+        o.visible = o.cicloTimer % total < o.cicloVisible
       } else if (o.guillotina) {
         // Guillotina: se mantiene corta la mayor parte del ciclo y de
         // pronto se extiende hasta la mitad de la pantalla (nunca más) y
@@ -1916,10 +2082,12 @@ export class EndlessRunner {
 
   dibujarBloque(obs) {
     const ctx = this.ctx
+    const enAlerta = obs.cayendo && obs.alertaTimer > 0
+    const parpadeo = enAlerta && obs.alertaTimer % 10 < 5
     ctx.save()
     ctx.shadowBlur = 10
-    ctx.shadowColor = '#a855f7'
-    ctx.fillStyle = '#a855f7'
+    ctx.shadowColor = parpadeo ? '#f87171' : '#a855f7'
+    ctx.fillStyle = parpadeo ? '#f87171' : '#a855f7'
     ctx.beginPath()
     ctx.roundRect(obs.x, obs.y, obs.ancho, obs.alto, 6)
     ctx.fill()
@@ -2006,6 +2174,17 @@ export class EndlessRunner {
     const cy = obs.y + obs.radio
     const r = obs.radio
     const dientes = 10
+
+    if (obs.pendulo) {
+      ctx.save()
+      ctx.strokeStyle = 'rgba(255,255,255,0.4)'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(obs.anclaX, obs.anclaY)
+      ctx.lineTo(cx, cy)
+      ctx.stroke()
+      ctx.restore()
+    }
 
     ctx.save()
     ctx.translate(cx, cy)
@@ -2207,7 +2386,39 @@ export class EndlessRunner {
       case 'ventana':
         this.dibujarVentana(obs)
         break
+      case 'laser':
+        this.dibujarLaser(obs)
+        break
     }
+  }
+
+  dibujarLaser(obs) {
+    const ctx = this.ctx
+    const cy = obs.y + obs.alto / 2
+    ctx.save()
+    if (!obs.visible) {
+      ctx.strokeStyle = 'rgba(248,113,113,0.35)'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([5, 5])
+      ctx.beginPath()
+      ctx.moveTo(obs.x, cy)
+      ctx.lineTo(obs.x + obs.ancho, cy)
+      ctx.stroke()
+      ctx.setLineDash([])
+      ctx.restore()
+      return
+    }
+
+    ctx.shadowBlur = 16
+    ctx.shadowColor = '#f87171'
+    ctx.fillStyle = '#f87171'
+    ctx.beginPath()
+    ctx.roundRect(obs.x, obs.y, obs.ancho, obs.alto, 4)
+    ctx.fill()
+    ctx.fillStyle = 'rgba(255,255,255,0.6)'
+    ctx.shadowBlur = 0
+    ctx.fillRect(obs.x + 4, cy - 1, obs.ancho - 8, 2)
+    ctx.restore()
   }
 
   dibujarTrampolin(t) {
