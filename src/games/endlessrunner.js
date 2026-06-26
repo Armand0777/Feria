@@ -376,6 +376,7 @@ export class EndlessRunner {
     this.imanes = []
     this.slopes = []
     this.pozos = []
+    this.pinzas = []
     this.sobrePlataforma = false
     this.plataformaActual = null
     this.squashTimer = 0
@@ -865,7 +866,7 @@ export class EndlessRunner {
       // Pendiente (slope): rampa sólida de 45°
       const direccion = Math.random() < 0.5 ? 1 : -1
       this.slopes.push({ tipo: 'slope', x: this.canvas.width, anchoBase: 70, altoMax: 38, direccion })
-    } else if (rand < 0.9 && !esPrincipiante) {
+    } else if (rand < 0.89 && !esPrincipiante) {
       // Plataforma móvil
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
@@ -880,7 +881,28 @@ export class EndlessRunner {
         fase: Math.random() * Math.PI * 2,
         frameCount: 0,
       })
-    } else if (rand < 0.94 && !esPrincipiante) {
+    } else if (rand < 0.91 && !esPrincipiante) {
+      // Plataforma intermitente: aparece y desaparece en ciclos — solo
+      // sirve de apoyo mientras está visible
+      const yBase = 70 + Math.random() * 120
+      this.plataformasMoviles.push({
+        tipo: 'plataformaMovil',
+        x: this.canvas.width,
+        y: yBase,
+        yBase,
+        ancho: 90,
+        alto: 12,
+        amplitud: 0,
+        frecuencia: 0,
+        fase: 0,
+        frameCount: 0,
+        parpadea: true,
+        visible: true,
+        cicloTimer: 0,
+        cicloVisible: 70,
+        cicloInvisible: 40,
+      })
+    } else if (rand < 0.93 && !esPrincipiante) {
       // Orbe — requiere que el jugador presione al tocarlo
       const variantes = ['amarillo', 'rosa', 'rojo', 'azul', 'verde', 'negro']
       const variante = variantes[Math.floor(Math.random() * variantes.length)]
@@ -893,12 +915,63 @@ export class EndlessRunner {
         pulsacion: 0,
         activado: false,
       })
-    } else if (rand < 0.97 && !esPrincipiante) {
+    } else if (rand < 0.945 && !esPrincipiante) {
       // Imán invertido: no mata, desestabiliza
       this.imanes.push({ tipo: 'iman', x: this.canvas.width, y: this.canvas.height / 2, radio: 70, pulsacion: 0 })
-    } else if (!esPrincipiante) {
+    } else if (rand < 0.96 && !esPrincipiante) {
       // Muro frágil: se rompe si cae encima, mata si lo toca de costado
       this.obstaculos.push({ tipo: 'muroFragil', x: this.canvas.width, y: suelo - 40, ancho: 36, alto: 40 })
+    } else if (rand < 0.975 && !esPrincipiante) {
+      // Guillotina: pico de techo que se extiende casi hasta el suelo en
+      // ciclos cortos — la mayor parte del tiempo está "armada" arriba
+      const alturaDisponible = this.canvas.height - SUELO_ALTO
+      this.obstaculos.push({
+        tipo: 'spikeTop',
+        x: this.canvas.width,
+        y: techoY,
+        ancho: 40,
+        alto: 50,
+        guillotina: true,
+        cicloTimer: 0,
+        fase: Math.floor(Math.random() * 40),
+        altoMin: 50,
+        altoMax: alturaDisponible - 60,
+        cicloQuieto: 60,
+        cicloBajada: 12,
+        cicloSubida: 18,
+      })
+    } else if (rand < 0.99 && !esPrincipiante) {
+      // Sierra orbital: en vez de quedarse fija, gira alrededor de un
+      // punto en pleno aire — hay que esquivarla siguiendo su trayectoria
+      const radioOrbita = 35 + Math.random() * 20
+      const radio = 14
+      this.obstaculos.push({
+        tipo: 'sierra',
+        orbital: true,
+        centroX: this.canvas.width + radioOrbita,
+        centroY: 90 + Math.random() * 110,
+        radioOrbita,
+        anguloOrbita: Math.random() * Math.PI * 2,
+        velocidadOrbita: 0.04 + Math.random() * 0.02,
+        x: this.canvas.width,
+        y: 90,
+        radio,
+        rotacion: 0,
+        velocidadRotacion: 0.1,
+      })
+    } else if (!esPrincipiante) {
+      // Pinza: dos bloques (techo y suelo) cuyo hueco central se abre y
+      // se cierra con el tiempo — hay que cruzar cuando está más abierto
+      this.pinzas.push({
+        tipo: 'pinza',
+        x: this.canvas.width,
+        ancho: 40,
+        cicloTimer: 0,
+        fase: Math.random() * Math.PI * 2,
+        frecuencia: 0.025,
+        huecoMin: 80,
+        huecoMax: 170,
+      })
     } else {
       // Pico simple de respaldo
       this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
@@ -1267,6 +1340,8 @@ export class EndlessRunner {
     if (this.jugador.velocidadY < 0) return
 
     for (const p of this.plataformasMoviles) {
+      if (p.parpadea && !p.visible) continue
+
       const enX =
         this.jugador.x + this.jugador.ancho - 4 > p.x && this.jugador.x + 4 < p.x + p.ancho
       const pieJugador = this.jugador.y + this.jugador.alto
@@ -1321,6 +1396,25 @@ export class EndlessRunner {
     // Si el pie está claramente por debajo de la superficie, no logró
     // posarse encima — chocó de costado o por abajo
     return pie > superficieY + 14
+  }
+
+  // Pinza: dos bloques (techo y suelo) con un hueco central que se abre y
+  // cierra con el tiempo — mata si el jugador toca cualquiera de los dos
+  colisionPinza(p) {
+    const j = this.jugador
+    const margen = 4
+    const jx1 = j.x + margen
+    const jx2 = j.x + j.ancho - margen
+    if (jx2 < p.x || jx1 > p.x + p.ancho) return false
+
+    const regionTop = TECHO
+    const regionBottom = this.canvas.height - SUELO_ALTO
+    const bloqueAlto = (regionBottom - regionTop - p.huecoActual) / 2
+
+    const jy1 = j.y + margen
+    const jy2 = j.y + j.alto - margen
+
+    return jy1 < regionTop + bloqueAlto || jy2 > regionBottom - bloqueAlto
   }
 
   // Los orbes solo se activan con la pulsación del jugador al estar en rango
@@ -1489,6 +1583,15 @@ export class EndlessRunner {
       }
     }
 
+    for (const p of this.pinzas) {
+      if (this.colisionPinza(p)) {
+        this.terminado = true
+        audio.muerte()
+        this.generarParticulas()
+        return
+      }
+    }
+
     for (const p of this.portalesModo) {
       const colision =
         this.jugador.x + 4 < p.x + p.ancho &&
@@ -1534,7 +1637,31 @@ export class EndlessRunner {
     this.portalesModo.forEach((p) => (p.x -= this.velocidad))
 
     this.obstaculos.forEach((o) => {
-      if (o.tipo === 'sierra') o.rotacion += o.velocidadRotacion
+      if (o.tipo === 'sierra') {
+        o.rotacion += o.velocidadRotacion
+
+        if (o.orbital) {
+          // Sierra que orbita un punto fijo en el aire en vez de quedarse
+          // pegada al suelo/techo — su centro también avanza con el nivel
+          o.anguloOrbita += o.velocidadOrbita
+          o.centroX -= this.velocidad
+          o.x = o.centroX + Math.cos(o.anguloOrbita) * o.radioOrbita - o.radio
+          o.y = o.centroY + Math.sin(o.anguloOrbita) * o.radioOrbita - o.radio
+        }
+      } else if (o.tipo === 'spikeTop' && o.guillotina) {
+        // Guillotina: pico de techo que se mantiene corto la mayor parte
+        // del ciclo y de pronto se extiende casi hasta el suelo y regresa
+        o.cicloTimer++
+        const total = o.cicloQuieto + o.cicloBajada + o.cicloSubida
+        const t = (o.cicloTimer + o.fase) % total
+        if (t < o.cicloQuieto) {
+          o.alto = o.altoMin
+        } else if (t < o.cicloQuieto + o.cicloBajada) {
+          o.alto = lerp(o.altoMin, o.altoMax, (t - o.cicloQuieto) / o.cicloBajada)
+        } else {
+          o.alto = lerp(o.altoMax, o.altoMin, (t - o.cicloQuieto - o.cicloBajada) / o.cicloSubida)
+        }
+      }
     })
 
     this.imanes.forEach((m) => {
@@ -1569,8 +1696,22 @@ export class EndlessRunner {
       p.x -= this.velocidad
       p.frameCount++
       p.y = p.yBase + Math.sin(p.frameCount * p.frecuencia + p.fase) * p.amplitud
+
+      if (p.parpadea) {
+        p.cicloTimer++
+        const total = p.cicloVisible + p.cicloInvisible
+        p.visible = p.cicloTimer % total < p.cicloVisible
+      }
     })
     this.plataformasMoviles = this.plataformasMoviles.filter((p) => p.x + p.ancho > 0)
+
+    this.pinzas.forEach((p) => {
+      p.x -= this.velocidad
+      p.cicloTimer++
+      const t = (Math.sin(p.cicloTimer * p.frecuencia + p.fase) + 1) / 2
+      p.huecoActual = lerp(p.huecoMin, p.huecoMax, t)
+    })
+    this.pinzas = this.pinzas.filter((p) => p.x + p.ancho > 0)
 
     if (this.modoActual === 'robot' && this.jugador.presionando) {
       this.jugador.tiempoPresion++
@@ -1973,6 +2114,25 @@ export class EndlessRunner {
     ctx.restore()
   }
 
+  dibujarPinza(p) {
+    const ctx = this.ctx
+    const regionTop = TECHO
+    const regionBottom = this.canvas.height - SUELO_ALTO
+    const bloqueAlto = (regionBottom - regionTop - p.huecoActual) / 2
+
+    ctx.save()
+    ctx.shadowBlur = 10
+    ctx.shadowColor = '#f43f5e'
+    ctx.fillStyle = '#f43f5e'
+    ctx.beginPath()
+    ctx.roundRect(p.x, regionTop, p.ancho, bloqueAlto, 4)
+    ctx.fill()
+    ctx.beginPath()
+    ctx.roundRect(p.x, regionBottom - bloqueAlto, p.ancho, bloqueAlto, 4)
+    ctx.fill()
+    ctx.restore()
+  }
+
   dibujarIman(m) {
     const ctx = this.ctx
     m.pulsacion += 0.05
@@ -2074,6 +2234,18 @@ export class EndlessRunner {
   dibujarPlataformaMovil(p) {
     const ctx = this.ctx
 
+    if (p.parpadea && !p.visible) {
+      // Apagada: solo un contorno punteado tenue como advertencia — no es sólida
+      ctx.save()
+      ctx.strokeStyle = 'rgba(124,58,237,0.35)'
+      ctx.lineWidth = 1.5
+      ctx.setLineDash([4, 4])
+      ctx.strokeRect(p.x, p.y, p.ancho, p.alto)
+      ctx.setLineDash([])
+      ctx.restore()
+      return
+    }
+
     ctx.fillStyle = '#7c3aed'
     ctx.shadowBlur = 10
     ctx.shadowColor = '#7c3aed'
@@ -2088,8 +2260,8 @@ export class EndlessRunner {
     ctx.fillStyle = '#c4b5fd'
     ctx.font = '10px monospace'
     ctx.textAlign = 'center'
-    ctx.fillText('↕', p.x + 10, p.y - 4)
-    ctx.fillText('↕', p.x + p.ancho - 10, p.y - 4)
+    ctx.fillText(p.parpadea ? '◐' : '↕', p.x + 10, p.y - 4)
+    ctx.fillText(p.parpadea ? '◐' : '↕', p.x + p.ancho - 10, p.y - 4)
     ctx.textAlign = 'left'
   }
 
@@ -2317,6 +2489,7 @@ export class EndlessRunner {
     this.dibujarFondo()
     this.dibujarSuelo()
     this.slopes.forEach((s) => this.dibujarSlope(s))
+    this.pinzas.forEach((p) => this.dibujarPinza(p))
     this.trampolin.forEach((t) => this.dibujarTrampolin(t))
     this.plataformasMoviles.forEach((p) => this.dibujarPlataformaMovil(p))
     this.orbes.forEach((o) => this.dibujarOrbe(o))
