@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react'
-import { MODOS } from '../games/endlessrunner'
+import { MODOS, NIVELES } from '../games/endlessrunner'
 
 const defaultJ1 = {
   jugador: { nombre: 'Jugador 1', color: '#6366f1', colorFondo: '#0a0a1a' },
   juego: { velocidadInicial: 5, gravedad: 0.55, altoDeSalto: -9.5 },
   modoInicial: 'cubo',
+  nivel: 'facil',
 }
 
 const defaultJ2 = {
   jugador: { nombre: 'Jugador 2', color: '#f97316', colorFondo: '#0a0a1a' },
   juego: { velocidadInicial: 5, gravedad: 0.55, altoDeSalto: -9.5 },
   modoInicial: 'cubo',
+  nivel: 'facil',
 }
 
 function PreviewCubo({ color }) {
@@ -123,6 +125,36 @@ function ColumnaJugador({ titulo, controles, colorBorde, config, onChange }) {
               >
                 <span style={{ fontSize: 16 }}>{modo.icono}</span>
                 <span className="font-mono text-[10px] font-bold text-white">{modo.nombre}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="flex w-full flex-col gap-2">
+        <span className="font-mono text-xs text-gray-400">Nivel de dificultad</span>
+        <div className="grid grid-cols-4 gap-2">
+          {Object.values(NIVELES).map((n) => {
+            const seleccionado = (config.nivel || 'facil') === n.id
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={() =>
+                  onChange({
+                    ...config,
+                    nivel: n.id,
+                    juego: { ...config.juego, velocidadInicial: n.velocidadInicial },
+                  })
+                }
+                className="flex flex-col items-center gap-1 rounded-md p-1.5"
+                style={{
+                  border: seleccionado ? `2px solid ${n.color}` : '1px solid #334155',
+                  background: seleccionado ? `${n.color}26` : '#1e293b',
+                }}
+              >
+                <span style={{ fontSize: 14 }}>{n.icono}</span>
+                <span className="font-mono text-[10px] font-bold text-white">{n.nombre}</span>
               </button>
             )
           })}

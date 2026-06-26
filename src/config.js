@@ -2,6 +2,8 @@
 const config = {
   // Modo de personaje con el que arranca la partida (cubo, nave, bola, ovni, ola, robot)
   modoInicial: 'cubo',
+  // Nivel de dificultad (facil, normal, dificil, extremo)
+  nivel: 'facil',
   jugador: {
     // Nombre que se muestra y se guarda en el ranking
     nombre: 'Jugador1',

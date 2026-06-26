@@ -12,6 +12,80 @@ export const MODOS = {
 const SUELO_ALTO = 40
 const TECHO = 10
 
+// Niveles de dificultad: controlan la curva de velocidad/frecuencia de
+// obstáculos y qué combos compuestos pueden aparecer. "umbralComplejos" es
+// el puntaje a partir del cual se habilitan sierra/picoDoble/etc (antes era
+// un valor fijo de 300 para todos).
+export const NIVELES = {
+  facil: {
+    id: 'facil',
+    nombre: 'Fácil',
+    icono: '🟢',
+    color: '#22c55e',
+    descripcion: 'El de siempre',
+    velocidadInicial: 5,
+    incrementoVelocidad: 0.3,
+    framesIncrementoVel: 200,
+    frecInicial: 100,
+    frecMinima: 60,
+    framesDecaerFrec: 400,
+    umbralComplejos: 300,
+    combos: [],
+  },
+  normal: {
+    id: 'normal',
+    nombre: 'Normal',
+    icono: '🟡',
+    color: '#fbbf24',
+    descripcion: 'Un poco más exigente',
+    velocidadInicial: 6,
+    incrementoVelocidad: 0.35,
+    framesIncrementoVel: 180,
+    frecInicial: 90,
+    frecMinima: 55,
+    framesDecaerFrec: 350,
+    umbralComplejos: 150,
+    combos: ['sierraPico', 'vallePendientes'],
+  },
+  dificil: {
+    id: 'dificil',
+    nombre: 'Difícil',
+    icono: '🟠',
+    color: '#f97316',
+    descripcion: 'Obstáculos compuestos',
+    velocidadInicial: 7,
+    incrementoVelocidad: 0.4,
+    framesIncrementoVel: 150,
+    frecInicial: 80,
+    frecMinima: 50,
+    framesDecaerFrec: 300,
+    umbralComplejos: 50,
+    combos: ['sierraPico', 'vallePendientes', 'picosCuadruples', 'cascadaPlataformas', 'gravedadAlterna'],
+  },
+  extremo: {
+    id: 'extremo',
+    nombre: 'Extremo',
+    icono: '🔴',
+    color: '#ef4444',
+    descripcion: 'Sin piedad',
+    velocidadInicial: 8,
+    incrementoVelocidad: 0.5,
+    framesIncrementoVel: 120,
+    frecInicial: 70,
+    frecMinima: 45,
+    framesDecaerFrec: 250,
+    umbralComplejos: 0,
+    combos: [
+      'sierraPico',
+      'vallePendientes',
+      'picosCuadruples',
+      'cascadaPlataformas',
+      'gravedadAlterna',
+      'picoDobleSierra',
+    ],
+  },
+}
+
 // Robot: salto continuo mientras se mantiene presionado, interpola entre
 // un mínimo (tap corto) y un máximo (sostenido hasta el tope de frames)
 const ROBOT_MIN_VY = -7
@@ -295,6 +369,10 @@ export class EndlessRunner {
     this.plataformaActual = null
     this.squashTimer = 0
     this.puntaje = 0
+
+    this.nivelActual = this.config.nivel || 'facil'
+    this.nivelCfg = NIVELES[this.nivelActual] || NIVELES.facil
+
     this.velocidad = this.config.juego.velocidadInicial
     this.frameCount = 0
     this.corriendo = false
@@ -303,8 +381,8 @@ export class EndlessRunner {
     this.gravedadInvertida = false
     this.timerInversion = 0
 
-    this.frecuenciaObstaculo = 100
-    this.proximoObstaculo = 100
+    this.frecuenciaObstaculo = this.nivelCfg.frecInicial
+    this.proximoObstaculo = this.nivelCfg.frecInicial
     this.proximoPortalModo = 300
 
     this.mensajeModo = null
@@ -621,9 +699,17 @@ export class EndlessRunner {
   }
 
   generarObstaculo() {
-    const rand = Math.random()
     const suelo = this.canvas.height - SUELO_ALTO
-    const esPrincipiante = this.puntaje < 300
+    const esPrincipiante = this.puntaje < this.nivelCfg.umbralComplejos
+    const combosDisponibles = this.nivelCfg.combos
+
+    if (!esPrincipiante && combosDisponibles.length > 0 && Math.random() < 0.22) {
+      const id = combosDisponibles[Math.floor(Math.random() * combosDisponibles.length)]
+      this.generarCombo(id, suelo)
+      return
+    }
+
+    const rand = Math.random()
 
     if (rand < 0.14) {
       // Pico simple
@@ -765,6 +851,156 @@ export class EndlessRunner {
         ancho: 40,
         alto: 50,
       })
+    }
+  }
+
+  // Obstáculos compuestos: combinan elementos ya existentes en patrones más
+  // exigentes, siempre con un camino limpio garantizado (ningún combo es
+  // imposible de librar).
+  generarCombo(id, suelo) {
+    switch (id) {
+      case 'sierraPico': {
+        // Pico de suelo + sierra flotante poco después: hay que ajustar la
+        // altura del aterrizaje antes de que llegue la sierra
+        this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
+        const radio = 20
+        this.obstaculos.push({
+          tipo: 'sierra',
+          x: this.canvas.width + 110,
+          y: suelo - 40 - radio * 2 - 20,
+          radio,
+          rotacion: 0,
+          velocidadRotacion: 0.06,
+        })
+        break
+      }
+
+      case 'vallePendientes': {
+        // Dos pendientes enfrentadas formando un valle — el jugador se
+        // desliza hacia abajo y enseguida hacia arriba sin perder ritmo
+        const anchoBase = 70
+        const altoMax = 38
+        this.slopes.push({ tipo: 'slope', x: this.canvas.width, anchoBase, altoMax, direccion: -1 })
+        this.slopes.push({
+          tipo: 'slope',
+          x: this.canvas.width + anchoBase,
+          anchoBase,
+          altoMax,
+          direccion: 1,
+        })
+        break
+      }
+
+      case 'picosCuadruples': {
+        // 4 picos seguidos — más de lo que libra un salto normal — con un
+        // pad rojo (salto alto) justo antes que garantiza la altura extra
+        this.trampolin.push({
+          tipo: 'trampolin',
+          variante: 'rojo',
+          x: this.canvas.width,
+          y: suelo - 14,
+          ancho: 56,
+          alto: 14,
+          animando: false,
+          frameAnimacion: 0,
+        })
+        const inicioX = this.canvas.width + 56 + 40
+        for (let i = 0; i < 4; i++) {
+          this.obstaculos.push({
+            tipo: 'pico',
+            x: inicioX + i * 40,
+            y: suelo - 50,
+            ancho: 40,
+            alto: 50,
+          })
+        }
+        break
+      }
+
+      case 'cascadaPlataformas': {
+        // Foso de picos debajo + 3 plataformas estáticas escalonadas como
+        // camino seguro por arriba
+        for (let i = 0; i < 4; i++) {
+          this.obstaculos.push({
+            tipo: 'pico',
+            x: this.canvas.width + i * 40,
+            y: suelo - 50,
+            ancho: 40,
+            alto: 50,
+          })
+        }
+        const alturas = [60, 100, 140]
+        alturas.forEach((altura, i) => {
+          const y = suelo - altura
+          this.plataformasMoviles.push({
+            tipo: 'plataformaMovil',
+            x: this.canvas.width + i * 70,
+            y,
+            yBase: y,
+            ancho: 60,
+            alto: 12,
+            amplitud: 0,
+            frecuencia: 0,
+            fase: 0,
+            frameCount: 0,
+          })
+        })
+        break
+      }
+
+      case 'gravedadAlterna': {
+        // Dos orbes de gravedad cercanos: obligan a invertir y volver a
+        // invertir en poco espacio
+        this.orbes.push({
+          tipo: 'orbe',
+          variante: 'azul',
+          x: this.canvas.width,
+          y: suelo - 60,
+          radio: 14,
+          pulsacion: 0,
+          activado: false,
+        })
+        this.orbes.push({
+          tipo: 'orbe',
+          variante: 'verde',
+          x: this.canvas.width + 140,
+          y: TECHO + 60,
+          radio: 14,
+          pulsacion: 0,
+          activado: false,
+        })
+        break
+      }
+
+      case 'picoDobleSierra': {
+        // Pico doble con una sierra justo en el centro del hueco — el hueco
+        // se agranda respecto al normal para dejar margen real a los lados
+        const altoTecho = 45
+        const huecoMinimoExtra = 110
+        const alturaDisponible = this.canvas.height - SUELO_ALTO
+        let altoSuelo = 50
+        const huecoReal = alturaDisponible - altoSuelo - altoTecho
+        if (huecoReal < huecoMinimoExtra) altoSuelo = alturaDisponible - altoTecho - huecoMinimoExtra
+
+        this.obstaculos.push({
+          tipo: 'picoDoble',
+          x: this.canvas.width,
+          anchoBase: 44,
+          altoSuelo,
+          altoTecho,
+        })
+
+        const centroHueco = altoTecho + (alturaDisponible - altoSuelo - altoTecho) / 2
+        this.obstaculos.push({
+          tipo: 'sierra',
+          x: this.canvas.width + 6,
+          y: centroHueco - 16,
+          radio: 16,
+          rotacion: 0,
+          velocidadRotacion: 0.07,
+        })
+        break
+      }
     }
   }
 
@@ -1196,9 +1432,11 @@ export class EndlessRunner {
     this.frameCount++
     this.puntaje++
 
-    if (this.frameCount % 200 === 0) this.velocidad += 0.3
+    if (this.frameCount % this.nivelCfg.framesIncrementoVel === 0) {
+      this.velocidad += this.nivelCfg.incrementoVelocidad
+    }
 
-    if (this.frameCount % 400 === 0 && this.frecuenciaObstaculo > 60) {
+    if (this.frameCount % this.nivelCfg.framesDecaerFrec === 0 && this.frecuenciaObstaculo > this.nivelCfg.frecMinima) {
       this.frecuenciaObstaculo -= 2
     }
 

@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { MODOS } from '../games/endlessrunner'
+import { MODOS, NIVELES } from '../games/endlessrunner'
 
 export default function ConfigPanel({ config, onConfigChange }) {
   const previewRef = useRef(null)
@@ -42,6 +42,14 @@ export default function ConfigPanel({ config, onConfigChange }) {
   const set = (path, val) => {
     const [section, key] = path.split('.')
     onConfigChange({ ...config, [section]: { ...config[section], [key]: val } })
+  }
+
+  const elegirNivel = (n) => {
+    onConfigChange({
+      ...config,
+      nivel: n.id,
+      juego: { ...config.juego, velocidadInicial: n.velocidadInicial },
+    })
   }
 
   return (
@@ -167,6 +175,44 @@ export default function ConfigPanel({ config, onConfigChange }) {
             </div>
           )
         })}
+
+        {/* Selector de nivel de dificultad */}
+        <div>
+          <label className="label-section">NIVEL DE DIFICULTAD</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
+            {Object.values(NIVELES).map((n) => {
+              const seleccionado = (config.nivel || 'facil') === n.id
+              return (
+                <button
+                  key={n.id}
+                  onClick={() => elegirNivel(n)}
+                  style={{
+                    background: seleccionado ? `${n.color}15` : 'var(--surface2)',
+                    border: seleccionado ? `1.5px solid ${n.color}` : '.5px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '8px 4px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                >
+                  <span style={{ fontSize: 14 }}>{n.icono}</span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: seleccionado ? n.color : 'var(--muted)',
+                    }}
+                  >
+                    {n.nombre.toUpperCase()}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
 
         {/* Selector de modo */}
         <div>
