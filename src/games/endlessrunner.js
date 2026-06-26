@@ -97,6 +97,16 @@ function lerp(a, b, t) {
   return a + (b - a) * tClamp
 }
 
+// Ancho "efectivo" de un obstáculo para saber cuándo ya salió de pantalla
+// por la izquierda — no todos los tipos usan `ancho` (sierra usa `radio`,
+// picoDoble usa `anchoBase`)
+function anchoEfectivo(o) {
+  if (o.ancho != null) return o.ancho
+  if (o.radio != null) return o.radio * 2
+  if (o.anchoBase != null) return o.anchoBase
+  return 0
+}
+
 // Coyote time: margen para saltar justo después de salir de una plataforma
 const COYOTE_FRAMES = 6 // ≈ 0.1s a 60fps — solo Cubo y Robot
 
@@ -1518,7 +1528,7 @@ export class EndlessRunner {
       this.proximoPortalModo = this.frameCount + 400 + Math.random() * 200
     }
 
-    this.obstaculos = this.obstaculos.filter((o) => o.x + o.ancho > 0)
+    this.obstaculos = this.obstaculos.filter((o) => o.x + anchoEfectivo(o) > 0)
     this.portalesModo = this.portalesModo.filter((p) => p.x + p.ancho > 0)
     this.obstaculos.forEach((o) => (o.x -= this.velocidad))
     this.portalesModo.forEach((p) => (p.x -= this.velocidad))
