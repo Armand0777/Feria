@@ -39,11 +39,17 @@ export default function GameCanvas({
       j.dibujar()
 
       if (j.terminado) {
-        setPuntajeFinal(j.puntaje)
-        setTerminado(true)
         if (!gameOverEnviadoRef.current) {
           gameOverEnviadoRef.current = true
+          setPuntajeFinal(j.puntaje)
           onGameOver(j.puntaje)
+          // Esperamos a que se vea la explosión de partículas antes de
+          // mostrar la pantalla de reintentar
+          setTimeout(() => setTerminado(true), 1000)
+        }
+
+        if (j.framesMuerte < 60) {
+          animFrameRef.current = requestAnimationFrame(tick)
         }
         return
       }

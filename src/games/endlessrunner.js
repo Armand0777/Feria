@@ -378,6 +378,7 @@ export class EndlessRunner {
     this.pozos = []
     this.pinzas = []
     this.contadorTecho = 0
+    this.framesMuerte = 0
     this.sobrePlataforma = false
     this.plataformaActual = null
     this.squashTimer = 0
@@ -1315,15 +1316,23 @@ export class EndlessRunner {
     this.mensajeModoTimer = 90
   }
 
+  // Explosión de muerte: ráfaga de partículas que se desvanece en ~1
+  // segundo antes de que la pantalla de reintentar aparezca (ver
+  // GameCanvas.jsx, que retrasa esa pantalla ese mismo tiempo)
   generarParticulas() {
-    for (let i = 0; i < 16; i++) {
+    const color = MODOS[this.modoActual].color
+    for (let i = 0; i < 28; i++) {
+      const angulo = Math.random() * Math.PI * 2
+      const velocidad = 2 + Math.random() * 7
       this.particulas.push({
         x: this.jugador.x + this.jugador.ancho / 2,
         y: this.jugador.y + this.jugador.alto / 2,
-        vx: (Math.random() - 0.5) * 10,
-        vy: (Math.random() - 0.5) * 10,
+        vx: Math.cos(angulo) * velocidad,
+        vy: Math.sin(angulo) * velocidad,
         vida: 1.0,
-        color: MODOS[this.modoActual].color,
+        decaimiento: 0.012 + Math.random() * 0.008,
+        size: 3 + Math.random() * 5,
+        color: Math.random() < 0.8 ? color : '#ffffff',
       })
     }
   }
@@ -1761,7 +1770,23 @@ export class EndlessRunner {
   }
 
   actualizar() {
-    if (!this.corriendo || this.terminado) return
+    if (!this.corriendo) return
+
+    if (this.terminado) {
+      // Tras la muerte, seguimos animando la explosión de partículas
+      // durante ~1 segundo (60 frames) antes de congelar todo del todo
+      if (this.framesMuerte < 60) {
+        this.framesMuerte++
+        this.particulas = this.particulas.filter((p) => p.vida > 0)
+        this.particulas.forEach((p) => {
+          p.vy += 0.15
+          p.x += p.vx
+          p.y += p.vy
+          p.vida -= p.decaimiento || 0.05
+        })
+      }
+      return
+    }
 
     this.frameCount++
     this.puntaje++
@@ -2566,10 +2591,13 @@ export class EndlessRunner {
   dibujarParticulas() {
     const ctx = this.ctx
     this.particulas.forEach((p) => {
+      const tam = p.size || 6
       ctx.save()
       ctx.globalAlpha = Math.max(0, p.vida)
       ctx.fillStyle = p.color
-      ctx.fillRect(p.x - 3, p.y - 3, 6, 6)
+      ctx.shadowBlur = 8
+      ctx.shadowColor = p.color
+      ctx.fillRect(p.x - tam / 2, p.y - tam / 2, tam, tam)
       ctx.restore()
     })
   }
