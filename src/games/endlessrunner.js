@@ -918,28 +918,41 @@ export class EndlessRunner {
     } else if (rand < 0.945 && !esPrincipiante) {
       // Imán invertido: no mata, desestabiliza
       this.imanes.push({ tipo: 'iman', x: this.canvas.width, y: this.canvas.height / 2, radio: 70, pulsacion: 0 })
-    } else if (rand < 0.96 && !esPrincipiante) {
+    } else if (rand < 0.95 && !esPrincipiante) {
       // Muro frágil: se rompe si cae encima, mata si lo toca de costado
       this.obstaculos.push({ tipo: 'muroFragil', x: this.canvas.width, y: suelo - 40, ancho: 36, alto: 40 })
-    } else if (rand < 0.975 && !esPrincipiante) {
-      // Guillotina: pico de techo que se extiende casi hasta el suelo en
-      // ciclos cortos — la mayor parte del tiempo está "armada" arriba
-      const alturaDisponible = this.canvas.height - SUELO_ALTO
-      this.obstaculos.push({
-        tipo: 'spikeTop',
-        x: this.canvas.width,
-        y: techoY,
+    } else if (rand < 0.98 && !esPrincipiante) {
+      // Guillotina: pico que se extiende en ciclos cortos, pero nunca pasa
+      // de la mitad de la pantalla — puede colgar del techo o subir del
+      // suelo (se elige al azar)
+      const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+      const altoMax = alturaDisponible * 0.5
+      const cicloComun = {
         ancho: 40,
-        alto: 50,
         guillotina: true,
         cicloTimer: 0,
         fase: Math.floor(Math.random() * 40),
         altoMin: 50,
-        altoMax: alturaDisponible - 60,
-        cicloQuieto: 60,
+        altoMax,
+        cicloQuieto: 55,
         cicloBajada: 12,
         cicloSubida: 18,
-      })
+      }
+
+      if (Math.random() < 0.5) {
+        // Variante de techo
+        this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, alto: 50, ...cicloComun })
+      } else {
+        // Variante de suelo — sube desde abajo en vez de bajar del techo
+        this.obstaculos.push({
+          tipo: 'pico',
+          x: this.canvas.width,
+          y: suelo - 50,
+          alto: 50,
+          ...cicloComun,
+          guillotinaSuelo: true,
+        })
+      }
     } else if (rand < 0.99 && !esPrincipiante) {
       // Sierra orbital: en vez de quedarse fija, gira alrededor de un
       // punto en pleno aire — hay que esquivarla siguiendo su trayectoria
@@ -1648,9 +1661,10 @@ export class EndlessRunner {
           o.x = o.centroX + Math.cos(o.anguloOrbita) * o.radioOrbita - o.radio
           o.y = o.centroY + Math.sin(o.anguloOrbita) * o.radioOrbita - o.radio
         }
-      } else if (o.tipo === 'spikeTop' && o.guillotina) {
-        // Guillotina: pico de techo que se mantiene corto la mayor parte
-        // del ciclo y de pronto se extiende casi hasta el suelo y regresa
+      } else if (o.guillotina) {
+        // Guillotina: se mantiene corta la mayor parte del ciclo y de
+        // pronto se extiende hasta la mitad de la pantalla (nunca más) y
+        // regresa — puede colgar del techo o subir desde el suelo
         o.cicloTimer++
         const total = o.cicloQuieto + o.cicloBajada + o.cicloSubida
         const t = (o.cicloTimer + o.fase) % total
@@ -1660,6 +1674,11 @@ export class EndlessRunner {
           o.alto = lerp(o.altoMin, o.altoMax, (t - o.cicloQuieto) / o.cicloBajada)
         } else {
           o.alto = lerp(o.altoMax, o.altoMin, (t - o.cicloQuieto - o.cicloBajada) / o.cicloSubida)
+        }
+
+        if (o.guillotinaSuelo) {
+          const suelo = this.canvas.height - SUELO_ALTO
+          o.y = suelo - o.alto
         }
       }
     })
