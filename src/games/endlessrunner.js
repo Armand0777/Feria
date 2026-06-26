@@ -290,6 +290,7 @@ export class EndlessRunner {
     this.orbes = []
     this.trampolin = []
     this.imanes = []
+    this.slopes = []
     this.sobrePlataforma = false
     this.plataformaActual = null
     this.squashTimer = 0
@@ -343,6 +344,10 @@ export class EndlessRunner {
 
     switch (this.modoActual) {
       case 'cubo':
+        // presionando=true habilita el rebote automático: mientras se
+        // mantenga sostenido, el cubo vuelve a saltar cada vez que toca
+        // el suelo (igual que en Geometry Dash real)
+        this.jugador.presionando = true
         this.saltar()
         break
       case 'nave':
@@ -393,6 +398,7 @@ export class EndlessRunner {
           this.jugador.presionando = false
         }
         break
+      case 'cubo':
       case 'nave':
       case 'ola':
         this.jugador.presionando = false
@@ -619,7 +625,7 @@ export class EndlessRunner {
     const suelo = this.canvas.height - SUELO_ALTO
     const esPrincipiante = this.puntaje < 300
 
-    if (rand < 0.18) {
+    if (rand < 0.14) {
       // Pico simple
       this.obstaculos.push({
         tipo: 'pico',
@@ -628,7 +634,7 @@ export class EndlessRunner {
         ancho: 40,
         alto: 50,
       })
-    } else if (rand < 0.3) {
+    } else if (rand < 0.24) {
       // Bloque doble
       this.obstaculos.push({
         tipo: 'bloqueDoble',
@@ -664,7 +670,30 @@ export class EndlessRunner {
         altoSuelo,
         altoTecho,
       })
-    } else if (rand < 0.64) {
+    } else if (rand < 0.56 && !esPrincipiante) {
+      // Picos triples — la estructura más icónica de GD: con un salto normal
+      // se libran los 3 juntos, pero hay que saltar EXACTAMENTE a tiempo
+      for (let i = 0; i < 3; i++) {
+        this.obstaculos.push({
+          tipo: 'pico',
+          x: this.canvas.width + i * 40,
+          y: suelo - 50,
+          ancho: 40,
+          alto: 50,
+        })
+      }
+    } else if (rand < 0.64 && !esPrincipiante) {
+      // Pendiente (slope): rampa sólida de 45° en la que el jugador se
+      // desliza por encima — mata si la toca de costado o por abajo
+      const direccion = Math.random() < 0.5 ? 1 : -1
+      this.slopes.push({
+        tipo: 'slope',
+        x: this.canvas.width,
+        anchoBase: 70,
+        altoMax: 38,
+        direccion,
+      })
+    } else if (rand < 0.72) {
       // Pad automático (siempre puede aparecer — es positivo, no requiere input)
       const variantes = esPrincipiante
         ? ['amarillo']
@@ -680,7 +709,7 @@ export class EndlessRunner {
         animando: false,
         frameAnimacion: 0,
       })
-    } else if (rand < 0.72 && !esPrincipiante) {
+    } else if (rand < 0.8 && !esPrincipiante) {
       // Plataforma móvil
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
@@ -695,7 +724,7 @@ export class EndlessRunner {
         fase: Math.random() * Math.PI * 2,
         frameCount: 0,
       })
-    } else if (rand < 0.8 && !esPrincipiante) {
+    } else if (rand < 0.86 && !esPrincipiante) {
       // Orbe — requiere que el jugador presione al tocarlo (no es automático)
       const variantes = ['amarillo', 'rosa', 'rojo', 'azul', 'verde', 'negro']
       const variante = variantes[Math.floor(Math.random() * variantes.length)]
@@ -708,7 +737,7 @@ export class EndlessRunner {
         pulsacion: 0,
         activado: false,
       })
-    } else if (rand < 0.88 && !esPrincipiante) {
+    } else if (rand < 0.92 && !esPrincipiante) {
       // Imán invertido: no mata, desestabiliza atrayendo al jugador hacia su centro
       this.imanes.push({
         tipo: 'iman',
@@ -717,7 +746,7 @@ export class EndlessRunner {
         radio: 70,
         pulsacion: 0,
       })
-    } else if (rand < 0.95 && !esPrincipiante) {
+    } else if (rand < 0.97 && !esPrincipiante) {
       // Muro frágil: se rompe si cae encima (plataforma de un solo uso),
       // mata si lo toca de costado
       this.obstaculos.push({
@@ -948,6 +977,44 @@ export class EndlessRunner {
     }
   }
 
+  // Altura de la superficie de una pendiente en una coordenada X del mundo
+  superficieSlope(s, x) {
+    const suelo = this.canvas.height - SUELO_ALTO
+    const f = Math.max(0, Math.min(1, (x - s.x) / s.anchoBase))
+    return s.direccion === 1 ? suelo - f * s.altoMax : suelo - (1 - f) * s.altoMax
+  }
+
+  actualizarColisionSlope() {
+    if (this.jugador.velocidadY < 0) return
+
+    for (const s of this.slopes) {
+      const j = this.jugador
+      if (j.x + j.ancho < s.x || j.x > s.x + s.anchoBase) continue
+
+      const superficieY = this.superficieSlope(s, j.x + j.ancho / 2)
+      const pie = j.y + j.alto
+
+      if (pie >= superficieY - 4 && pie <= superficieY + 14) {
+        j.y = superficieY - j.alto
+        j.velocidadY = 0
+        j.enSuelo = true
+        j.saltosAire = 0
+        break
+      }
+    }
+  }
+
+  colisionSlope(s) {
+    const j = this.jugador
+    if (j.x + j.ancho < s.x || j.x > s.x + s.anchoBase) return false
+
+    const superficieY = this.superficieSlope(s, j.x + j.ancho / 2)
+    const pie = j.y + j.alto
+    // Si el pie está claramente por debajo de la superficie, no logró
+    // posarse encima — chocó de costado o por abajo
+    return pie > superficieY + 14
+  }
+
   // Los orbes solo se activan con la pulsación del jugador al estar en rango
   // (no automáticamente al tocarlos) — se llama desde iniciarPresion().
   // La Ola es el único modo incompatible con los orbes, igual que en GD real.
@@ -1062,6 +1129,7 @@ export class EndlessRunner {
     }
 
     this.actualizarColisionPlataforma()
+    this.actualizarColisionSlope()
 
     // Muros frágiles: si el jugador cae encima se rompen (no matan) y se
     // quitan de la lista antes de que el chequeo letal genérico los vea
@@ -1091,6 +1159,15 @@ export class EndlessRunner {
       }
 
       if (colision) {
+        this.terminado = true
+        audio.muerte()
+        this.generarParticulas()
+        return
+      }
+    }
+
+    for (const s of this.slopes) {
+      if (this.colisionSlope(s)) {
         this.terminado = true
         audio.muerte()
         this.generarParticulas()
@@ -1149,6 +1226,11 @@ export class EndlessRunner {
     })
     this.imanes = this.imanes.filter((m) => m.x + m.radio * 2 > 0)
 
+    this.slopes.forEach((s) => {
+      s.x -= this.velocidad
+    })
+    this.slopes = this.slopes.filter((s) => s.x + s.anchoBase > 0)
+
     if (this.squashTimer > 0) this.squashTimer--
 
     this.trampolin.forEach((t) => {
@@ -1182,8 +1264,16 @@ export class EndlessRunner {
     this.aplicarImanes()
     this.jugador.y += this.jugador.velocidadY
     this.actualizarColisionPlataforma()
+    this.actualizarColisionSlope()
     this.actualizarTrail()
     this.aplicarLimites()
+
+    // Rebote automático del cubo: si se mantiene presionado, salta de
+    // nuevo en el instante en que toca el suelo (no hace falta soltar
+    // y volver a presionar para cada salto)
+    if (this.modoActual === 'cubo' && this.jugador.presionando && this.jugador.enSuelo) {
+      this.saltar()
+    }
 
     this.lineasVelocidad.forEach((l) => {
       l.x -= this.velocidad * 2
@@ -1437,6 +1527,42 @@ export class EndlessRunner {
     ctx.lineTo(obs.x + obs.ancho - 8, obs.y + 10)
     ctx.moveTo(obs.x + obs.ancho / 2, obs.y + obs.alto / 2)
     ctx.lineTo(obs.x + 10, obs.y + obs.alto - 6)
+    ctx.stroke()
+    ctx.restore()
+  }
+
+  dibujarSlope(s) {
+    const ctx = this.ctx
+    const suelo = this.canvas.height - SUELO_ALTO
+
+    ctx.save()
+    ctx.fillStyle = '#0ea5e9'
+    ctx.shadowBlur = 8
+    ctx.shadowColor = '#0ea5e9'
+    ctx.beginPath()
+    if (s.direccion === 1) {
+      ctx.moveTo(s.x, suelo)
+      ctx.lineTo(s.x + s.anchoBase, suelo)
+      ctx.lineTo(s.x + s.anchoBase, suelo - s.altoMax)
+    } else {
+      ctx.moveTo(s.x, suelo - s.altoMax)
+      ctx.lineTo(s.x, suelo)
+      ctx.lineTo(s.x + s.anchoBase, suelo)
+    }
+    ctx.closePath()
+    ctx.fill()
+
+    ctx.shadowBlur = 0
+    ctx.strokeStyle = '#7dd3fc'
+    ctx.lineWidth = 2
+    ctx.beginPath()
+    if (s.direccion === 1) {
+      ctx.moveTo(s.x, suelo)
+      ctx.lineTo(s.x + s.anchoBase, suelo - s.altoMax)
+    } else {
+      ctx.moveTo(s.x, suelo - s.altoMax)
+      ctx.lineTo(s.x + s.anchoBase, suelo)
+    }
     ctx.stroke()
     ctx.restore()
   }
@@ -1775,6 +1901,7 @@ export class EndlessRunner {
   dibujar() {
     this.dibujarFondo()
     this.dibujarSuelo()
+    this.slopes.forEach((s) => this.dibujarSlope(s))
     this.trampolin.forEach((t) => this.dibujarTrampolin(t))
     this.plataformasMoviles.forEach((p) => this.dibujarPlataformaMovil(p))
     this.orbes.forEach((o) => this.dibujarOrbe(o))
