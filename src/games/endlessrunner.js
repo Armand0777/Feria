@@ -540,8 +540,10 @@ export class EndlessRunner {
       }
 
       case 'bola':
-        if (this.gravedadInvertida) j.velocidadY -= gravedad
-        else j.velocidadY += gravedad
+        if (!impulsoActivo) {
+          if (this.gravedadInvertida) j.velocidadY -= gravedad
+          else j.velocidadY += gravedad
+        }
         j.rotacion += 4
         break
 
@@ -1409,6 +1411,10 @@ export class EndlessRunner {
   }
 
   aplicarImanes() {
+    // Si el jugador está firmemente parado en una superficie, el imán no
+    // debe "despegarlo" — solo desestabiliza mientras está en el aire
+    if (this.jugador.enSuelo) return
+
     for (const m of this.imanes) {
       const jcx = this.jugador.x + this.jugador.ancho / 2
       const jcy = this.jugador.y + this.jugador.alto / 2
