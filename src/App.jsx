@@ -11,6 +11,8 @@ import ResultadoVersus from './pages/ResultadoVersus'
 import Ranking from './components/Ranking'
 import RankingTV from './pages/RankingTV'
 import CodigoQR from './components/CodigoQR'
+import TicTacToeSelector from './components/TicTacToeSelector'
+import TicTacToe from './components/TicTacToe'
 
 function App() {
   // Si la URL contiene /ranking-tv, mostrar solo esa pantalla
@@ -27,6 +29,7 @@ function App() {
   const [configVersusJ1, setConfigVersusJ1] = useState(null)
   const [configVersusJ2, setConfigVersusJ2] = useState(null)
   const [resultadoVersus, setResultadoVersus] = useState(null)
+  const [modoTicTacToe, setModoTicTacToe] = useState(null)
 
   const guardarPuntaje = async (puntaje) => {
     const { error } = await supabase.from('puntajes').insert({
@@ -101,8 +104,23 @@ function App() {
               config={config}
               onStart={iniciarPartida}
               onVersus={() => setPantalla('versus-config')}
+              onTicTacToe={() => setPantalla('tictactoe-config')}
             />
           </div>
+        )}
+
+        {pantalla === 'tictactoe-config' && (
+          <TicTacToeSelector
+            onIniciar={(modo) => {
+              setModoTicTacToe(modo)
+              setPantalla('tictactoe-jugar')
+            }}
+            onVolver={() => setPantalla('configurar')}
+          />
+        )}
+
+        {pantalla === 'tictactoe-jugar' && (
+          <TicTacToe modo={modoTicTacToe} onVolver={() => setPantalla('configurar')} />
         )}
 
         {pantalla === 'jugar' && (

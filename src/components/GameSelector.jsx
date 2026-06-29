@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function GameSelector({ config, onStart, onVersus }) {
+export default function GameSelector({ config, onStart, onVersus, onTicTacToe }) {
   const [record, setRecord] = useState(null)
   const canvasRef = useRef(null)
   const frameRef = useRef(null)
@@ -161,6 +161,25 @@ export default function GameSelector({ config, onStart, onVersus }) {
             ⚔ VERSUS
           </button>
         </div>
+
+        <button
+          onClick={onTicTacToe}
+          style={{
+            width: '100%',
+            padding: '10px 0',
+            marginBottom: 16,
+            background: 'transparent',
+            border: '1px solid var(--border2)',
+            borderRadius: 8,
+            color: 'var(--muted)',
+            fontFamily: 'inherit',
+            fontWeight: 700,
+            fontSize: 12,
+            cursor: 'pointer',
+          }}
+        >
+          ✕○ ESTACIÓN 2 · 3 EN RAYA
+        </button>
 
         {/* Instrucciones */}
         <div className="card-dark" style={{ marginBottom: 16 }}>
