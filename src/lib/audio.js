@@ -143,26 +143,25 @@ export class AudioEngine {
 
   muerte() {
     this._tocar({
-      frecuencia: 440,
-      frecFinal: 60,
-      tipo: 'sawtooth',
-      duracion: 0.4,
-      volumen: 0.35,
-      ataque: 0.01,
-      decaimiento: 0.35,
-      distorsion: true,
+      frecuencia: 380,
+      frecFinal: 90,
+      tipo: 'triangle',
+      duracion: 0.5,
+      volumen: 0.26,
+      ataque: 0.02,
+      decaimiento: 0.45,
     })
     setTimeout(() => {
       this._tocar({
-        frecuencia: 120,
-        tipo: 'sawtooth',
-        duracion: 0.2,
-        volumen: 0.2,
-        ataque: 0.001,
-        decaimiento: 0.18,
-        distorsion: true,
+        frecuencia: 180,
+        frecFinal: 50,
+        tipo: 'sine',
+        duracion: 0.35,
+        volumen: 0.16,
+        ataque: 0.02,
+        decaimiento: 0.32,
       })
-    }, 80)
+    }, 120)
   }
 
   cambioModo(modoNuevo) {
