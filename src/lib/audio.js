@@ -1,16 +1,70 @@
 // Motor de audio para GeoRunner
-// Todos los sonidos generados con Web Audio API — sin archivos externos
+// Los efectos se generan con Web Audio API — la música de fondo usa un
+// archivo de audio (ver RUTA_MUSICA) reproducido en bucle con <audio>
+
+const RUTA_MUSICA = '/musica-fondo.mp3'
 
 export class AudioEngine {
   constructor() {
     this.ctx = null
     this.habilitado = true
     this.volumenMaster = 0.4
+    this.volumenMusica = 0.35
+    this.musica = null
+    this.musicaDebeSonar = false
   }
 
   init() {
     if (this.ctx) return
     this.ctx = new (window.AudioContext || window.webkitAudioContext)()
+  }
+
+  _crearMusica() {
+    if (this.musica) return
+    this.musica = new Audio(RUTA_MUSICA)
+    this.musica.loop = true
+    this.musica.volume = this.volumenMusica
+  }
+
+  // Se llama al comenzar la partida (primera presión). Si el archivo de
+  // música todavía no existe en /public, el play() simplemente falla en
+  // silencio — no rompe nada mientras tanto.
+  iniciarMusica() {
+    this._crearMusica()
+    this.musicaDebeSonar = true
+    if (!this.habilitado) return
+    this.musica.currentTime = 0
+    this.musica.volume = this.volumenMusica
+    this.musica.play().catch(() => {})
+  }
+
+  // Se llama al morir/perder. Por defecto hace un fade-out corto en vez de
+  // cortar de golpe.
+  detenerMusica({ fade = true } = {}) {
+    this.musicaDebeSonar = false
+    if (!this.musica) return
+
+    if (!fade) {
+      this.musica.pause()
+      return
+    }
+
+    const pasos = 10
+    const volInicial = this.musica.volume
+    let i = 0
+    const intervalo = setInterval(() => {
+      i++
+      if (!this.musica) {
+        clearInterval(intervalo)
+        return
+      }
+      this.musica.volume = Math.max(0, volInicial * (1 - i / pasos))
+      if (i >= pasos) {
+        clearInterval(intervalo)
+        this.musica.pause()
+        this.musica.currentTime = 0
+      }
+    }, 30)
   }
 
   get listo() {
@@ -84,18 +138,6 @@ export class AudioEngine {
           decaimiento: duracion * 0.8,
         })
       }, delay * 1000)
-    })
-  }
-
-  salto() {
-    this._tocar({
-      frecuencia: 300,
-      frecFinal: 600,
-      tipo: 'square',
-      duracion: 0.12,
-      volumen: 0.25,
-      ataque: 0.005,
-      decaimiento: 0.1,
     })
   }
 
@@ -174,20 +216,6 @@ export class AudioEngine {
     ])
   }
 
-  saltoRobot(carga) {
-    const freq = 500 - carga * 200
-    const freqFinal = 200 + carga * 400
-    this._tocar({
-      frecuencia: freq,
-      frecFinal: freqFinal,
-      tipo: 'square',
-      duracion: 0.18,
-      volumen: 0.28 + carga * 0.12,
-      ataque: 0.005,
-      decaimiento: 0.15,
-    })
-  }
-
   invertirGravedad() {
     this._tocar({
       frecuencia: 300,
@@ -202,6 +230,12 @@ export class AudioEngine {
 
   toggleMute() {
     this.habilitado = !this.habilitado
+
+    if (this.musica && this.musicaDebeSonar) {
+      if (this.habilitado) this.musica.play().catch(() => {})
+      else this.musica.pause()
+    }
+
     return this.habilitado
   }
 }

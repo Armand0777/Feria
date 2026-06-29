@@ -431,6 +431,8 @@ export class EndlessRunner {
   iniciarPresion() {
     audio.init()
 
+    if (!this.corriendo) audio.iniciarMusica()
+
     this.corriendo = true
     if (this.intentarActivarOrbes()) return
 
@@ -461,7 +463,6 @@ export class EndlessRunner {
           this.jugador.saltosAire++
           this.jugador.enSuelo = false
           this.jugador.frameUltimoSaltoOvni = this.frameCount
-          audio.salto()
         }
         break
       case 'ola':
@@ -475,7 +476,6 @@ export class EndlessRunner {
           this.jugador.tiempoPresion = 0
           this.jugador.enSuelo = false
           this.jugador.coyoteTimer = 0
-          audio.salto()
         }
         break
     }
@@ -485,8 +485,6 @@ export class EndlessRunner {
     switch (this.modoActual) {
       case 'robot':
         if (this.jugador.presionando) {
-          const carga = this.jugador.tiempoPresion / ROBOT_MAX_FRAMES_CARGA
-          audio.saltoRobot(carga)
           this.jugador.presionando = false
         }
         break
@@ -505,7 +503,6 @@ export class EndlessRunner {
       this.jugador.enSuelo = false
       this.jugador.coyoteTimer = 0
       this.jugador.saltosAire = 0
-      audio.salto()
     }
   }
 
@@ -1320,6 +1317,7 @@ export class EndlessRunner {
   // segundo antes de que la pantalla de reintentar aparezca (ver
   // GameCanvas.jsx, que retrasa esa pantalla ese mismo tiempo)
   generarParticulas() {
+    audio.detenerMusica()
     const color = MODOS[this.modoActual].color
     for (let i = 0; i < 28; i++) {
       const angulo = Math.random() * Math.PI * 2
@@ -1487,7 +1485,6 @@ export class EndlessRunner {
       this.jugador.saltosAire = 0
       t.animando = true
       t.frameAnimacion = 0
-      audio.salto()
       return true
     }
     return false
@@ -1639,7 +1636,6 @@ export class EndlessRunner {
           color,
         })
       }
-      audio.salto()
       activoAlguno = true
     }
 
@@ -1671,7 +1667,6 @@ export class EndlessRunner {
         color: '#94a3b8',
       })
     }
-    audio.salto()
   }
 
   aplicarImanes() {
