@@ -1,10 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { EndlessRunner } from '../games/endlessrunner'
 import { audio } from '../lib/audio'
+import { crearReloj, pasosPendientes } from '../lib/pasoFijo'
 
 const COLORES_PARTICULAS = ['#6366f1', '#22d3ee', '#a855f7']
 
+const TEXTO_INICIO = {
+  teclado: 'PRESIONA ESPACIO O CLIC PARA INICIAR',
+  mano: 'CIERRA EL PUÑO ✊ PARA INICIAR',
+  cara: 'ABRE LA BOCA 😮 PARA INICIAR',
+}
+
 export default function GameCanvas({
+  ref,
   config,
   onGameOver,
   intento,
@@ -17,6 +25,7 @@ export default function GameCanvas({
   const juegoRef = useRef(null)
   const animFrameRef = useRef(null)
   const tickRef = useRef(null)
+  const relojRef = useRef(crearReloj())
   const gameOverEnviadoRef = useRef(false)
 
   const [terminado, setTerminado] = useState(false)
@@ -32,10 +41,12 @@ export default function GameCanvas({
     gameOverEnviadoRef.current = false
     setTerminado(false)
     setIniciado(false)
+    relojRef.current = crearReloj()
 
-    const tick = () => {
+    const tick = (ahora) => {
       const j = juegoRef.current
-      j.actualizar()
+      const pasos = pasosPendientes(relojRef.current, ahora)
+      for (let i = 0; i < pasos; i++) j.actualizar()
       j.dibujar()
 
       if (j.terminado) {
@@ -118,6 +129,10 @@ export default function GameCanvas({
     juego.soltarPresion()
   }
 
+  // Permite que otro control (la cámara con IA) presione y suelte igual
+  // que el teclado o el clic
+  useImperativeHandle(ref, () => ({ presionar: onPresionar, soltar: onSoltar }))
+
   useEffect(() => {
     const TECLAS = ['Space', 'ArrowUp', 'KeyW']
 
@@ -148,6 +163,7 @@ export default function GameCanvas({
     gameOverEnviadoRef.current = false
     setTerminado(false)
     setIniciado(false)
+    relojRef.current = crearReloj()
     animFrameRef.current = requestAnimationFrame(tickRef.current)
   }
 
@@ -208,7 +224,7 @@ export default function GameCanvas({
               opacity: mensajeVisible ? 1 : 0,
             }}
           >
-            PRESIONA ESPACIO O CLIC PARA INICIAR
+            {TEXTO_INICIO[config.control] ?? TEXTO_INICIO.teclado}
           </p>
         </div>
       )}

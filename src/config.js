@@ -4,6 +4,9 @@ const config = {
   modoInicial: 'cubo',
   // Nivel de dificultad (facil, normal, dificil, extremo)
   nivel: 'facil',
+  // Cómo se controla: teclado/clic, o con la cámara usando una red neuronal
+  // (mano = cerrar el puño, cara = abrir la boca)
+  control: 'teclado',
   jugador: {
     // Nombre que se muestra y se guarda en el ranking
     nombre: 'Jugador1',

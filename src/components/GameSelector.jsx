@@ -125,6 +125,11 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
           <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 4 }}>
             modo: {config.modoInicial || 'cubo'}
           </span>
+          {config.control && config.control !== 'teclado' && (
+            <span style={{ fontSize: 11, color: 'var(--accent2)', fontWeight: 700 }}>
+              🧠 control con IA: {config.control}
+            </span>
+          )}
         </div>
 
         {/* Botones */}

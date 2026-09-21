@@ -1,5 +1,12 @@
 import { useRef, useEffect } from 'react'
 import { MODOS, NIVELES } from '../games/endlessrunner'
+import { precargarModelo } from '../ia/modelos'
+
+const CONTROLES = [
+  { id: 'teclado', icono: '⌨', nombre: 'Teclado', descripcion: 'Espacio o clic' },
+  { id: 'mano', icono: '✊', nombre: 'Mano · IA', descripcion: 'Cierra el puño' },
+  { id: 'cara', icono: '😮', nombre: 'Cara · IA', descripcion: 'Abre la boca' },
+]
 
 export default function ConfigPanel({ config, onConfigChange }) {
   const previewRef = useRef(null)
@@ -42,6 +49,12 @@ export default function ConfigPanel({ config, onConfigChange }) {
   const set = (path, val) => {
     const [section, key] = path.split('.')
     onConfigChange({ ...config, [section]: { ...config[section], [key]: val } })
+  }
+
+  const elegirControl = (id) => {
+    // Empieza a bajar la red neuronal ya, para que esté lista al jugar
+    precargarModelo(id)
+    onConfigChange({ ...config, control: id })
   }
 
   const elegirNivel = (n) => {
@@ -94,6 +107,52 @@ export default function ConfigPanel({ config, onConfigChange }) {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Control: teclado o cámara con red neuronal */}
+        <div>
+          <label className="label-section">CONTROL</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
+            {CONTROLES.map((c) => {
+              const seleccionado = (config.control || 'teclado') === c.id
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => elegirControl(c.id)}
+                  style={{
+                    background: seleccionado ? '#22d3ee15' : 'var(--surface2)',
+                    border: seleccionado ? '1.5px solid var(--accent2)' : '.5px solid var(--border)',
+                    borderRadius: 8,
+                    padding: '8px 6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 3,
+                  }}
+                >
+                  <span style={{ fontSize: 16 }}>{c.icono}</span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 600,
+                      color: seleccionado ? 'var(--accent2)' : 'var(--muted)',
+                    }}
+                  >
+                    {c.nombre.toUpperCase()}
+                  </span>
+                  <span style={{ fontSize: 9, color: 'var(--muted)', textAlign: 'center' }}>
+                    {c.descripcion}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {config.control && config.control !== 'teclado' && (
+            <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+              Usa la cámara con una red neuronal. Todo se procesa en tu navegador.
+            </p>
+          )}
         </div>
 
         {/* Color de fondo */}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { EndlessRunnerVersus } from '../games/endlessrunnerVersus'
+import { crearReloj, pasosPendientes } from '../lib/pasoFijo'
 
 export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
   const canvasRef = useRef(null)
@@ -7,6 +8,7 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
   const juegoRef = useRef(null)
   const animFrameRef = useRef(null)
   const tickRef = useRef(null)
+  const relojRef = useRef(crearReloj())
   const finEnviadoRef = useRef(false)
 
   const [terminado, setTerminado] = useState(false)
@@ -21,10 +23,12 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
     finEnviadoRef.current = false
     setTerminado(false)
     setResultado(null)
+    relojRef.current = crearReloj()
 
-    const tick = () => {
+    const tick = (ahora) => {
       const j = juegoRef.current
-      j.actualizar()
+      const pasos = pasosPendientes(relojRef.current, ahora)
+      for (let i = 0; i < pasos; i++) j.actualizar()
       j.dibujar()
 
       if (j.terminado) {
@@ -100,6 +104,7 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
     finEnviadoRef.current = false
     setTerminado(false)
     setResultado(null)
+    relojRef.current = crearReloj()
     animFrameRef.current = requestAnimationFrame(tickRef.current)
   }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import configInicial from './config'
 import { supabase } from './lib/supabase'
 import GameCanvas from './components/GameCanvas'
@@ -9,18 +9,15 @@ import VersusSelector from './components/VersusSelector'
 import VersusCanvas from './components/VersusCanvas'
 import ResultadoVersus from './pages/ResultadoVersus'
 import Ranking from './components/Ranking'
-import RankingTV from './pages/RankingTV'
 import CodigoQR from './components/CodigoQR'
 import TicTacToeSelector from './components/TicTacToeSelector'
 import TicTacToe from './components/TicTacToe'
+import PanelCamara from './components/PanelCamara'
 
 function App() {
-  // Si la URL contiene /ranking-tv, mostrar solo esa pantalla
-  if (window.location.pathname === '/ranking-tv') {
-    return <RankingTV />
-  }
-
   const [config, setConfig] = useState(configInicial)
+  // Presionar/soltar del GameCanvas, para que la cámara con IA controle el juego
+  const controlJuegoRef = useRef(null)
   const [pantalla, setPantalla] = useState('configurar')
   const [intento, setIntento] = useState(0)
   const [mejorPuntaje, setMejorPuntaje] = useState(0)
@@ -127,6 +124,7 @@ function App() {
           <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
             <div className="flex w-full min-w-0 justify-center">
               <GameCanvas
+                ref={controlJuegoRef}
                 config={config}
                 onGameOver={onGameOver}
                 intento={intento}
@@ -135,7 +133,17 @@ function App() {
                 onSalir={onSalir}
               />
             </div>
-            <Ranking />
+            <div className="flex min-w-0 flex-col gap-4">
+              {config.control && config.control !== 'teclado' && (
+                <PanelCamara
+                  key={config.control}
+                  tipo={config.control}
+                  onPresionar={() => controlJuegoRef.current?.presionar()}
+                  onSoltar={() => controlJuegoRef.current?.soltar()}
+                />
+              )}
+              <Ranking />
+            </div>
           </div>
         )}
 
