@@ -4,14 +4,16 @@ export const URL_JUEGO = 'https://feria-opal.vercel.app/'
 export default function CodigoQR({ tamano = 64 }) {
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${tamano * 2}x${tamano * 2}&data=${encodeURIComponent(URL_JUEGO)}`
 
+  // En celulares no se muestra: quien lo ve ya está jugando desde el teléfono,
+  // y el recuadro fijo tapaba contenido
   return (
     <div
+      className="hidden md:flex"
       style={{
         position: 'fixed',
         bottom: 12,
         left: 12,
         zIndex: 50,
-        display: 'flex',
         alignItems: 'center',
         gap: 8,
         background: 'rgba(15,15,24,0.85)',

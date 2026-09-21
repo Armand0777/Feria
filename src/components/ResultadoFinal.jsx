@@ -1,6 +1,3 @@
-import { useState } from 'react'
-import { supabase } from '../lib/supabase'
-
 const LOGROS = [
   { id: 'primer_salto', label: 'PRIMER SALTO', req: () => true, color: '#22d3ee' },
   { id: 'superviviente', label: 'SUPERVIVIENTE', req: (p) => p >= 100, color: '#a855f7' },
@@ -14,14 +11,12 @@ export default function ResultadoFinal({
   puntaje,
   intentos,
   mejorPuntaje,
-  puntajeGuardado,
-  onGuardarPuntaje,
+  promedio,
+  estadoGuardado,
+  onReintentarGuardado,
   onJugarDeNuevo,
   onCambiarConfig,
 }) {
-  const [guardando, setGuardando] = useState(false)
-  const [guardado, setGuardado] = useState(Boolean(puntajeGuardado))
-
   const titulo =
     mejorPuntaje >= 600 ? '¡INCREÍBLE!' : mejorPuntaje >= 200 ? '¡BIEN HECHO!' : '¡SIGUE INTENTANDO!'
 
@@ -36,22 +31,6 @@ export default function ResultadoFinal({
         : mejorPuntaje < 600
           ? '"¡Excelente! Tienes reflejos de programador."'
           : '"¡Leyenda! Definitivamente tienes lo que se necesita para Ingeniería de Sistemas."'
-
-  const promedio = intentos > 0 ? Math.round(mejorPuntaje / intentos) : 0
-
-  const guardar = async () => {
-    setGuardando(true)
-    const { error } = await supabase.from('puntajes').insert({
-      nombre: config.jugador.nombre,
-      color: config.jugador.color,
-      puntaje: mejorPuntaje,
-      juego: 'geo-runner',
-    })
-    if (error) console.error(error)
-    setGuardando(false)
-    setGuardado(true)
-    onGuardarPuntaje?.()
-  }
 
   return (
     <div style={{ background: 'var(--bg)' }}>
@@ -111,33 +90,39 @@ export default function ResultadoFinal({
           </p>
         </div>
 
-        {/* Guardar puntaje */}
-        {!guardado ? (
-          <button
-            onClick={guardar}
-            disabled={guardando}
-            style={{
-              width: '100%',
-              padding: '12px 0',
-              marginBottom: 10,
-              background: 'var(--accent)',
-              border: 'none',
-              borderRadius: 8,
-              color: 'white',
-              fontFamily: 'inherit',
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: 'pointer',
-              opacity: guardando ? 0.6 : 1,
-            }}
-          >
-            {guardando ? 'Guardando...' : '↑ GUARDAR MI PUNTAJE EN EL RANKING'}
-          </button>
-        ) : (
+        {/* Estado del guardado: App guarda automáticamente al salir, una
+            sola vez por sesión (el mejor puntaje) */}
+        {estadoGuardado === 'guardando' && (
+          <div className="card-dark" style={{ marginBottom: 10, textAlign: 'center' }}>
+            <p style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600 }}>
+              Guardando tu puntaje en el ranking…
+            </p>
+          </div>
+        )}
+        {estadoGuardado === 'guardado' && (
           <div className="card-dark" style={{ marginBottom: 10, textAlign: 'center' }}>
             <p style={{ fontSize: 13, color: 'var(--success)', fontWeight: 600 }}>
               ✓ ¡Puntaje guardado! Tu nombre ya aparece en la pantalla grande.
             </p>
+          </div>
+        )}
+        {estadoGuardado === 'error' && (
+          <div
+            className="card-dark"
+            style={{
+              marginBottom: 10,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <p style={{ fontSize: 13, color: 'var(--danger)', fontWeight: 600 }}>
+              No se pudo guardar el puntaje. ¿Hay conexión?
+            </p>
+            <button className="btn-secondary" onClick={onReintentarGuardado} style={{ padding: '8px 14px' }}>
+              Reintentar
+            </button>
           </div>
         )}
 

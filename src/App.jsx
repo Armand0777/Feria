@@ -22,24 +22,37 @@ function App() {
   const [intento, setIntento] = useState(0)
   const [mejorPuntaje, setMejorPuntaje] = useState(0)
   const [ultimoPuntaje, setUltimoPuntaje] = useState(0)
-  const [puntajeGuardado, setPuntajeGuardado] = useState(false)
+  const [sumaPuntajes, setSumaPuntajes] = useState(0)
+  // Una sesión (de "Jugar" a "Salir") guarda UN solo puntaje: su mejor partida.
+  // pendiente → guardando → guardado | error
+  const [estadoGuardado, setEstadoGuardado] = useState('pendiente')
   const [configVersusJ1, setConfigVersusJ1] = useState(null)
   const [configVersusJ2, setConfigVersusJ2] = useState(null)
   const [resultadoVersus, setResultadoVersus] = useState(null)
   const [modoTicTacToe, setModoTicTacToe] = useState(null)
 
   const guardarPuntaje = async (puntaje) => {
+    setEstadoGuardado('guardando')
     const { error } = await supabase.from('puntajes').insert({
-      nombre: config.jugador.nombre,
+      nombre: config.jugador.nombre.trim() || 'Anónimo',
       color: config.jugador.color,
       puntaje,
       juego: 'geo-runner',
     })
     if (error) {
       console.error(error)
+      setEstadoGuardado('error')
       return
     }
-    setPuntajeGuardado(true)
+    setEstadoGuardado('guardado')
+  }
+
+  const reiniciarSesion = () => {
+    setIntento(0)
+    setMejorPuntaje(0)
+    setUltimoPuntaje(0)
+    setSumaPuntajes(0)
+    setEstadoGuardado('pendiente')
   }
 
   const iniciarPartida = () => {
@@ -50,6 +63,7 @@ function App() {
   const onGameOver = (puntaje) => {
     setUltimoPuntaje(puntaje)
     setMejorPuntaje((prev) => Math.max(prev, puntaje))
+    setSumaPuntajes((s) => s + puntaje)
   }
 
   const onReintentar = () => {
@@ -57,23 +71,19 @@ function App() {
   }
 
   const onSalir = () => {
-    if (!puntajeGuardado && mejorPuntaje > 0) {
+    if (estadoGuardado === 'pendiente' && mejorPuntaje > 0) {
       guardarPuntaje(mejorPuntaje)
     }
     setPantalla('resultado')
   }
 
   const onJugarDeNuevo = () => {
-    setIntento(0)
-    setPuntajeGuardado(false)
-    setPantalla('jugar')
+    reiniciarSesion()
+    iniciarPartida()
   }
 
   const onCambiarConfig = () => {
-    setIntento(0)
-    setMejorPuntaje(0)
-    setUltimoPuntaje(0)
-    setPuntajeGuardado(false)
+    reiniciarSesion()
     setPantalla('configurar')
   }
 
@@ -154,8 +164,9 @@ function App() {
               puntaje={ultimoPuntaje}
               intentos={intento}
               mejorPuntaje={mejorPuntaje}
-              puntajeGuardado={puntajeGuardado}
-              onGuardarPuntaje={() => setPuntajeGuardado(true)}
+              promedio={intento > 0 ? Math.round(sumaPuntajes / intento) : 0}
+              estadoGuardado={estadoGuardado}
+              onReintentarGuardado={() => guardarPuntaje(mejorPuntaje)}
               onJugarDeNuevo={onJugarDeNuevo}
               onCambiarConfig={onCambiarConfig}
             />
@@ -204,7 +215,9 @@ function App() {
         )}
       </div>
 
-      <CodigoQR />
+      {/* El QR invita a jugar desde el celular: solo tiene sentido en la
+          pantalla de inicio (y CodigoQR se oculta en pantallas chicas) */}
+      {pantalla === 'configurar' && <CodigoQR />}
     </div>
   )
 }

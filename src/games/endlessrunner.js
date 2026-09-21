@@ -2722,14 +2722,6 @@ export class EndlessRunner {
       ctx.textAlign = 'left'
     }
 
-    // Indicador de sonido (M)
-    const iconoAudio = audio.habilitado ? '♪' : '✕'
-    ctx.fillStyle = audio.habilitado ? '#22d3ee' : '#64748b'
-    ctx.font = '10px Inter, system-ui'
-    ctx.textAlign = 'right'
-    ctx.fillText(`[M] ${iconoAudio}`, w - 80, 18)
-    ctx.textAlign = 'left'
-
     // Velocidad (pequeño, debajo del puntaje)
     ctx.fillStyle = '#64748b'
     ctx.font = '10px monospace'

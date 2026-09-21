@@ -67,6 +67,15 @@ export class AudioEngine {
     }, 30)
   }
 
+  // Pausa del juego: congela la música sin olvidar que debía sonar
+  pausarMusica() {
+    if (this.musica && !this.musica.paused) this.musica.pause()
+  }
+
+  reanudarMusica() {
+    if (this.musica && this.musicaDebeSonar && this.habilitado) this.musica.play().catch(() => {})
+  }
+
   get listo() {
     return this.ctx && this.ctx.state === 'running' && this.habilitado
   }
