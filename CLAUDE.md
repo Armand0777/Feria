@@ -40,6 +40,9 @@ App guarda el estado de sesión: `config` (jugador, modo, nivel, control, físic
 - `src/pages/` — `RankingTV` (ruta `/ranking-tv`) y `ResultadoVersus`.
 - `src/lib/audio.js` — singleton `audio`: efectos con Web Audio API y música en bucle con `<audio>` (`public/musica-fondo.mp3`). Tecla M = mute.
 - `src/lib/supabase.js` — cliente Supabase.
+- `src/lib/canvasHD.js` — canvas nítido: la resolución interna = tamaño en pantalla × devicePixelRatio (tope 2,4 MP). Los motores reciben su tamaño **lógico** (`{ ancho, alto }`, 700×320 / 900×320) y `dibujar()` escala con `setTransform`; nunca usar `canvas.width` como coordenada del mundo.
+- `src/components/Selectores.jsx` — `SelectorModo`, `SelectorNivel` e `IconoModo` (sprite real vía `dibujarForma`), compartidos por ConfigPanel y VersusSelector. `Iconos.jsx` tiene los íconos SVG (no usar emojis en la UI).
+- `src/index.css` — sistema de diseño: tokens en `:root`, clases `btn-primary|btn-secondary|btn-accent` (+ `btn-lg`/`btn-sm`), `card-dark`, `label-section`, `topbar`. Todo lo propio va dentro de `@layer base/components`: una regla fuera de capa pisa las utilidades de Tailwind v4.
 - `src/lib/pasoFijo.js` — bucle de paso fijo: la simulación corre siempre a 60 pasos/s aunque la pantalla sea de 120/144 Hz o la IA baje los FPS. Los canvas llaman `actualizar()` tantas veces como diga `pasosPendientes()` y `dibujar()` una vez por cuadro.
 
 ### Control con IA (cámara)
@@ -60,6 +63,12 @@ App guarda el estado de sesión: `config` (jugador, modo, nivel, control, físic
 - `generarObstaculo()` elige por bandas de `Math.random()`. Los obstáculos complejos solo aparecen desde `nivelCfg.umbralComplejos`; `generarCombo()` arma patrones compuestos según `nivelCfg.combos`; el anti-sequía fuerza un obstáculo de techo tras 5 generaciones sin uno.
 - Para agregar un obstáculo: crearlo en `generarObstaculo()`, moverlo en `actualizar()`, darle colisión en `verificarColisiones()` y dibujo en `dibujarObstaculo()`. Si no tiene `ancho`, `radio` ni `anchoBase`, agregarlo a `anchoEfectivo()`.
 - Muerte: `terminado = true` y `generarParticulas()` (que también detiene la música). Se animan 60 frames de explosión y `GameCanvas` muestra el overlay 1 s después.
+- Campos que ajusta quien lo usa: `meta` (récord de la sesión para la barra del HUD; 0 = hitos), `mostrarHUD` y `colorFijo` (el versus los pone en false/true). `colorJugador()`: el cubo usa el color elegido; los demás modos, su color propio (en versus siempre el del jugador).
+- `GameCanvas` maneja pausa (P/Esc/botón, y al ocultar la pestaña) y guarda un solo puntaje por sesión: `App.estadoGuardado` = pendiente → guardando → guardado | error.
+
+## Verificación
+
+Hay Playwright + Chromium en la caché de npx (`%LOCALAPPDATA%/npm-cache/_npx/*/node_modules/playwright`): sirve para probar el juego corriendo a 60 fps y sacar capturas (`docs/capturas/`). En las pruebas, **interceptar las escrituras a Supabase** (`context.route('**/*.supabase.co/rest/**')`): la base es la real de la feria. Para medir la IA con GPU real: `--use-angle=d3d11 --enable-gpu --ignore-gpu-blocklist`. CI (`.github/workflows/ci.yml`) corre `oxlint --deny-warnings` y el build.
 
 ## Supabase
 

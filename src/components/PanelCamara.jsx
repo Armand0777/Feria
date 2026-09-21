@@ -27,6 +27,10 @@ function mensajeError(error) {
       return 'No se encontró ninguna cámara en este equipo.'
     case 'NotReadableError':
       return 'La cámara está siendo usada por otra aplicación.'
+    case 'SinWebGL':
+      return 'Este equipo tiene desactivada la aceleración gráfica (WebGL), que la red neuronal necesita. Actívala en la configuración del navegador.'
+    case 'ErrorInferencia':
+      return 'La red neuronal dejó de funcionar en este equipo.'
     default:
       return 'No se pudo cargar la red neuronal. ¿Hay conexión a internet?'
   }
@@ -104,10 +108,16 @@ export default function PanelCamara({ tipo, onPresionar, onSoltar }) {
       msRef.current.textContent = `${lectura.ms.toFixed(0)} ms`
     }
 
+    const mostrarError = (e) => {
+      setError(mensajeError(e))
+      setEstado('error')
+    }
+
     const control = new ControlCamara(tipo, {
       onPresionar: () => accionesRef.current.onPresionar?.(),
       onSoltar: () => accionesRef.current.onSoltar?.(),
       onLectura: mostrarLectura,
+      onError: mostrarError,
     })
 
     control
@@ -118,8 +128,7 @@ export default function PanelCamara({ tipo, onPresionar, onSoltar }) {
       .catch((e) => {
         if (control.detenido) return
         console.error(e)
-        setError(mensajeError(e))
-        setEstado('error')
+        mostrarError(e)
       })
 
     return () => control.detener()

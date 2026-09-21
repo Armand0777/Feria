@@ -52,6 +52,12 @@ export default function GameCanvas({
     mejorPuntajeRef.current = mejorPuntaje
   }, [mejorPuntaje])
 
+  // El bucle se crea una vez por config: llama siempre al callback vigente
+  const onGameOverRef = useRef(onGameOver)
+  useEffect(() => {
+    onGameOverRef.current = onGameOver
+  })
+
   useEffect(() => {
     const canvas = canvasRef.current
     const juego = new EndlessRunner(canvas, config, config.modoInicial, { ancho: ANCHO, alto: ALTO })
@@ -81,7 +87,7 @@ export default function GameCanvas({
           // Récord = superar tu mejor partida anterior de esta sesión (en la
           // primera partida no hay nada que superar)
           setEsRecord(mejorAnterior > 0 && j.puntaje > mejorAnterior)
-          onGameOver(j.puntaje)
+          onGameOverRef.current(j.puntaje)
           // Esperamos a que se vea la explosión de partículas antes de
           // mostrar la pantalla de reintentar
           setTimeout(() => setTerminado(true), 1000)

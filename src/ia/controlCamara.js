@@ -34,12 +34,23 @@ function errorConNombre(name, message) {
   return error
 }
 
+// MediaPipe necesita WebGL incluso corriendo en CPU (para leer las imágenes).
+// Algunas PCs lo tienen desactivado (sin aceleración gráfica)
+function hayWebGL() {
+  try {
+    return Boolean(document.createElement('canvas').getContext('webgl2'))
+  } catch {
+    return false
+  }
+}
+
 export class ControlCamara {
-  constructor(tipo, { onPresionar, onSoltar, onLectura }) {
+  constructor(tipo, { onPresionar, onSoltar, onLectura, onError }) {
     this.tipo = tipo
     this.onPresionar = onPresionar
     this.onSoltar = onSoltar
     this.onLectura = onLectura
+    this.onError = onError
 
     this.video = null
     this.stream = null
@@ -54,6 +65,11 @@ export class ControlCamara {
   async iniciar(video) {
     if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
       throw errorConNombre('SinContextoSeguro', 'La cámara requiere HTTPS o localhost')
+    }
+    // Se revisa antes de pedir permiso: no tiene sentido abrir la cámara
+    // si la red no va a poder procesarla
+    if (!hayWebGL()) {
+      throw errorConNombre('SinWebGL', 'El navegador no tiene WebGL (aceleración gráfica)')
     }
 
     // Cámara y modelo en paralelo: mientras la persona acepta el permiso,
@@ -118,9 +134,18 @@ export class ControlCamara {
     if (this.detenido) return
 
     if (this.video.readyState >= 2) {
-      const inicio = performance.now()
-      const lectura = this.tipo === 'mano' ? this.leerMano(inicio) : this.leerCara(inicio)
-      lectura.ms = performance.now() - inicio
+      let lectura
+      try {
+        const inicio = performance.now()
+        lectura = this.tipo === 'mano' ? this.leerMano(inicio) : this.leerCara(inicio)
+        lectura.ms = performance.now() - inicio
+      } catch (error) {
+        // Si la red falla, se avisa en vez de quedar "en vivo" sin hacer nada
+        console.error(error)
+        this.detener()
+        this.onError?.(errorConNombre('ErrorInferencia', error.message))
+        return
+      }
       this.aplicar(lectura.gesto)
       lectura.activo = this.activo
       lectura.conexiones = this.modelo.conexiones

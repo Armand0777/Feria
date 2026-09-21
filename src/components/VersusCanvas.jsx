@@ -15,6 +15,12 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
   const relojRef = useRef(crearReloj())
   const finEnviadoRef = useRef(false)
 
+  // El bucle se crea una vez por partida: llama siempre al callback vigente
+  const onVersusEndRef = useRef(onVersusEnd)
+  useEffect(() => {
+    onVersusEndRef.current = onVersusEnd
+  })
+
   useEffect(() => {
     const canvas = canvasRef.current
     const juego = new EndlessRunnerVersus(canvas, configJ1, configJ2, { ancho: ANCHO, alto: ALTO })
@@ -33,7 +39,7 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
       if (j.terminado) {
         if (!finEnviadoRef.current) {
           finEnviadoRef.current = true
-          onVersusEnd({
+          onVersusEndRef.current({
             ganador: j.ganador,
             puntajeJ1: j.juegoJ1.puntaje,
             puntajeJ2: j.juegoJ2.puntaje,

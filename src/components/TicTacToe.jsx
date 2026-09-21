@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Icono from './Iconos'
 
 const LINEAS = [
@@ -60,6 +60,23 @@ export default function TicTacToe({ modo, onVolver }) {
     }
   }, [resultado])
 
+  const jugar = useCallback(
+    (indice, jugador) => {
+      if (tablero[indice] !== null) return
+      const nuevoTablero = [...tablero]
+      nuevoTablero[indice] = jugador
+      setTablero(nuevoTablero)
+
+      const res = calcularResultado(nuevoTablero)
+      if (res) {
+        setResultado(res)
+      } else {
+        setTurno(jugador === 'X' ? 'O' : 'X')
+      }
+    },
+    [tablero],
+  )
+
   // Turno de la CPU (siempre juega 'O')
   useEffect(() => {
     if (modo !== 'cpu' || turno !== 'O' || resultado) return
@@ -68,21 +85,7 @@ export default function TicTacToe({ modo, onVolver }) {
       jugar(indice, 'O')
     }, 450)
     return () => clearTimeout(t)
-  }, [turno, modo, resultado, tablero])
-
-  const jugar = (indice, jugador) => {
-    if (tablero[indice] !== null) return
-    const nuevoTablero = [...tablero]
-    nuevoTablero[indice] = jugador
-    setTablero(nuevoTablero)
-
-    const res = calcularResultado(nuevoTablero)
-    if (res) {
-      setResultado(res)
-    } else {
-      setTurno(jugador === 'X' ? 'O' : 'X')
-    }
-  }
+  }, [turno, modo, resultado, tablero, jugar])
 
   const onCelda = (indice) => {
     if (resultado || tablero[indice] !== null) return

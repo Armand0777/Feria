@@ -343,6 +343,9 @@ export class EndlessRunner {
     this.modoActual = modoInicial
     // Récord a superar que muestra la barra del HUD (0 = usar hitos)
     this.meta = 0
+    // El versus dibuja su propio HUD y distingue a cada jugador por su color
+    this.mostrarHUD = true
+    this.colorFijo = false
 
     this.estrellas = Array.from({ length: 60 }, () => ({
       x: Math.random() * ancho,
@@ -741,7 +744,7 @@ export class EndlessRunner {
     // techo, forzamos la siguiente a ser un obstáculo de techo — evita que
     // el jugador se quede mucho tiempo sin nada que esquivar arriba
     if (!esPrincipiante && this.contadorTecho >= 5) {
-      this.generarObstaculoTechoForzado(techoY, suelo)
+      this.generarObstaculoTechoForzado(techoY)
       this.contadorTecho = 0
       return
     }
@@ -1117,7 +1120,7 @@ export class EndlessRunner {
 
   // Elegido al azar cuando llevamos demasiadas generaciones sin nada en el
   // techo — garantiza que nunca pase mucho tiempo sin un obstáculo arriba.
-  generarObstaculoTechoForzado(techoY, suelo) {
+  generarObstaculoTechoForzado(techoY) {
     const opciones = [
       () => this.obstaculos.push({ tipo: 'spikeTop', x: this.ancho, y: techoY, ancho: 40, alto: 50 }),
       () => {
@@ -1306,9 +1309,9 @@ export class EndlessRunner {
     audio.portal()
     setTimeout(() => audio.cambioModo(portal.modoDestino), 250)
 
-    const colorAnterior = MODOS[this.modoActual].color
-    const colorNuevo = MODOS[portal.modoDestino].color
+    const colorAnterior = this.colorJugador()
     this.modoActual = portal.modoDestino
+    const colorNuevo = this.colorJugador()
 
     for (let i = 0; i < 12; i++) {
       this.particulas.push({
@@ -1330,7 +1333,7 @@ export class EndlessRunner {
   // GameCanvas.jsx, que retrasa esa pantalla ese mismo tiempo)
   generarParticulas() {
     audio.detenerMusica()
-    const color = MODOS[this.modoActual].color
+    const color = this.colorJugador()
     for (let i = 0; i < 28; i++) {
       const angulo = Math.random() * Math.PI * 2
       const velocidad = 2 + Math.random() * 7
@@ -2779,7 +2782,7 @@ export class EndlessRunner {
         this.jugador.y,
         this.jugador.ancho,
         this.jugador.alto,
-        MODOS[this.modoActual].color,
+        this.colorJugador(),
         this.jugador.rotacion,
         this.modoActual === 'bola' ? this.squashTimer / 8 : 0,
       )
@@ -2798,6 +2801,14 @@ export class EndlessRunner {
       this.dibujarMensajeModo()
     }
 
-    this.dibujarUI()
+    if (this.mostrarHUD) this.dibujarUI()
+  }
+
+  // Color con que se dibuja al jugador: el cubo usa el color que eligió
+  // ("COLOR DEL CUBO"); los otros modos, el color propio de cada modo. En el
+  // versus (colorFijo) siempre el del jugador, para distinguir a J1 de J2.
+  colorJugador() {
+    if (this.colorFijo || this.modoActual === 'cubo') return this.config.jugador.color
+    return MODOS[this.modoActual].color
   }
 }

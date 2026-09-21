@@ -88,6 +88,12 @@ export class EndlessRunnerVersus {
     const tamano = { ancho: this.anchoJuego, alto: this.alto }
     this.juegoJ1 = new EndlessRunner(this.canvasJ1, this.configJ1, this.configJ1.modoInicial, tamano)
     this.juegoJ2 = new EndlessRunner(this.canvasJ2, this.configJ2, this.configJ2.modoInicial, tamano)
+    // Cada mitad sin su HUD propio (el versus dibuja nombre y puntaje encima)
+    // y cada jugador siempre de su color, aunque ambos estén en el mismo modo
+    for (const juego of [this.juegoJ1, this.juegoJ2]) {
+      juego.mostrarHUD = false
+      juego.colorFijo = true
+    }
     this.corriendo = false
     this.terminado = false
     this.ganador = null
