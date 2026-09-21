@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { MODOS, NIVELES } from '../games/endlessrunner'
 import { contextoHD } from '../lib/canvasHD'
 import Icono from './Iconos'
+import { SelectorModo, SelectorNivel } from './Selectores'
 
 const defaultJ1 = {
   jugador: { nombre: 'Jugador 1', color: '#6366f1', colorFondo: '#0a0a1a' },
@@ -122,56 +122,21 @@ function ColumnaJugador({ titulo, controles, colorBorde, config, onChange }) {
 
       <div className="flex w-full flex-col">
         <span className="label-section">Modo inicial</span>
-        <div className="grid grid-cols-3 gap-2">
-          {Object.values(MODOS).map((modo) => {
-            const seleccionado = config.modoInicial === modo.id
-            return (
-              <button
-                key={modo.id}
-                type="button"
-                onClick={() => onChange({ ...config, modoInicial: modo.id })}
-                className="flex flex-col items-center gap-1 rounded-md p-1.5"
-                style={{
-                  border: seleccionado ? `2px solid ${modo.color}` : '1px solid #334155',
-                  background: seleccionado ? `${modo.color}26` : '#1e293b',
-                }}
-              >
-                <span style={{ fontSize: 16 }}>{modo.icono}</span>
-                <span className="font-mono text-[10px] font-bold text-white">{modo.nombre}</span>
-              </button>
-            )
-          })}
-        </div>
+        <SelectorModo valor={config.modoInicial} onCambiar={(id) => onChange({ ...config, modoInicial: id })} />
       </div>
 
       <div className="flex w-full flex-col">
         <span className="label-section">Nivel de dificultad</span>
-        <div className="grid grid-cols-4 gap-2">
-          {Object.values(NIVELES).map((n) => {
-            const seleccionado = (config.nivel || 'facil') === n.id
-            return (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() =>
-                  onChange({
-                    ...config,
-                    nivel: n.id,
-                    juego: { ...config.juego, velocidadInicial: n.velocidadInicial },
-                  })
-                }
-                className="flex flex-col items-center gap-1 rounded-md p-1.5"
-                style={{
-                  border: seleccionado ? `2px solid ${n.color}` : '1px solid #334155',
-                  background: seleccionado ? `${n.color}26` : '#1e293b',
-                }}
-              >
-                <span style={{ fontSize: 14 }}>{n.icono}</span>
-                <span className="font-mono text-[10px] font-bold text-white">{n.nombre}</span>
-              </button>
-            )
-          })}
-        </div>
+        <SelectorNivel
+          valor={config.nivel}
+          onCambiar={(n) =>
+            onChange({
+              ...config,
+              nivel: n.id,
+              juego: { ...config.juego, velocidadInicial: n.velocidadInicial },
+            })
+          }
+        />
       </div>
     </div>
   )

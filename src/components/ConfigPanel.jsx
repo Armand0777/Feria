@@ -1,10 +1,11 @@
 import { useRef, useEffect } from 'react'
-import { MODOS, NIVELES } from '../games/endlessrunner'
+import { SelectorModo, SelectorNivel } from './Selectores'
+import Icono from './Iconos'
 import { precargarModelo } from '../ia/modelos'
 import { contextoHD } from '../lib/canvasHD'
 
 const CONTROLES = [
-  { id: 'teclado', icono: '⌨', nombre: 'Teclado', descripcion: 'Espacio o clic' },
+  { id: 'teclado', nombre: 'Teclado', descripcion: 'Espacio o clic' },
   { id: 'mano', icono: '✊', nombre: 'Mano · IA', descripcion: 'Cierra el puño' },
   { id: 'cara', icono: '😮', nombre: 'Cara · IA', descripcion: 'Abre la boca' },
 ]
@@ -132,7 +133,13 @@ export default function ConfigPanel({ config, onConfigChange }) {
                     gap: 3,
                   }}
                 >
-                  <span style={{ fontSize: 16 }}>{c.icono}</span>
+                  {c.id === 'teclado' ? (
+                    <span style={{ height: 20, display: 'flex', alignItems: 'center', color: 'var(--text)' }}>
+                      <Icono nombre="teclado" tamano={18} />
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: 16 }}>{c.icono}</span>
+                  )}
                   <span
                     style={{
                       fontSize: 10,
@@ -239,87 +246,17 @@ export default function ConfigPanel({ config, onConfigChange }) {
         {/* Selector de nivel de dificultad */}
         <div>
           <label className="label-section">NIVEL DE DIFICULTAD</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 6 }}>
-            {Object.values(NIVELES).map((n) => {
-              const seleccionado = (config.nivel || 'facil') === n.id
-              return (
-                <button
-                  key={n.id}
-                  onClick={() => elegirNivel(n)}
-                  style={{
-                    background: seleccionado ? `${n.color}15` : 'var(--surface2)',
-                    border: seleccionado ? `1.5px solid ${n.color}` : '.5px solid var(--border)',
-                    borderRadius: 8,
-                    padding: '8px 4px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 3,
-                  }}
-                >
-                  <span style={{ fontSize: 14 }}>{n.icono}</span>
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 600,
-                      color: seleccionado ? n.color : 'var(--muted)',
-                    }}
-                  >
-                    {n.nombre.toUpperCase()}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
+          <SelectorNivel valor={config.nivel} onCambiar={elegirNivel} />
         </div>
 
         {/* Selector de modo */}
         <div>
           <label className="label-section">MODO INICIAL</label>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 6 }}>
-            {Object.values(MODOS).map((m) => (
-              <button
-                key={m.id}
-                onClick={() => onConfigChange({ ...config, modoInicial: m.id })}
-                style={{
-                  background: config.modoInicial === m.id ? `${m.color}15` : 'var(--surface2)',
-                  border:
-                    config.modoInicial === m.id
-                      ? `1.5px solid ${m.color}`
-                      : '.5px solid var(--border)',
-                  borderRadius: 8,
-                  padding: '8px 6px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 3,
-                }}
-              >
-                <span style={{ fontSize: 16 }}>{m.icono}</span>
-                <span
-                  style={{
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: config.modoInicial === m.id ? m.color : 'var(--muted)',
-                  }}
-                >
-                  {m.nombre.toUpperCase()}
-                </span>
-                <span
-                  style={{
-                    fontSize: 9,
-                    color: 'var(--muted)',
-                    textAlign: 'center',
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {m.descripcion}
-                </span>
-              </button>
-            ))}
-          </div>
+          <SelectorModo
+            valor={config.modoInicial}
+            onCambiar={(id) => onConfigChange({ ...config, modoInicial: id })}
+            conDescripcion
+          />
         </div>
       </div>
     </div>

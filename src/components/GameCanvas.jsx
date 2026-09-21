@@ -56,6 +56,7 @@ export default function GameCanvas({
     const canvas = canvasRef.current
     const juego = new EndlessRunner(canvas, config, config.modoInicial, { ancho: ANCHO, alto: ALTO })
     juego.corriendo = false
+    juego.meta = mejorPuntajeRef.current
     juegoRef.current = juego
     gameOverEnviadoRef.current = false
     pausadoRef.current = false
@@ -227,6 +228,7 @@ export default function GameCanvas({
     const juego = juegoRef.current
     juego.reset()
     juego.corriendo = false
+    juego.meta = mejorPuntajeRef.current
     gameOverEnviadoRef.current = false
     pausadoRef.current = false
     setTerminado(false)

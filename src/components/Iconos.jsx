@@ -25,6 +25,12 @@ const TRAZOS = {
     </>
   ),
   volver: <path d="M15 5l-7 7 7 7" />,
+  teclado: (
+    <>
+      <rect x="2.5" y="6" width="19" height="12" rx="2" />
+      <path d="M6.5 10h1M10.5 10h1M14.5 10h1M8 14h8" />
+    </>
+  ),
 }
 
 export default function Icono({ nombre, tamano = 16 }) {

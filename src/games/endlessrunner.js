@@ -107,6 +107,10 @@ function anchoEfectivo(o) {
   return 0
 }
 
+// Hitos de puntaje para la barra del HUD cuando aún no hay récord en la
+// sesión (coinciden con los logros de ResultadoFinal)
+const HITOS = [100, 300, 600, 1000, 2000, 5000, 10000]
+
 // Coyote time: margen para saltar justo después de salir de una plataforma
 const COYOTE_FRAMES = 6 // ≈ 0.1s a 60fps — solo Cubo y Robot
 
@@ -337,6 +341,8 @@ export class EndlessRunner {
     this.alto = alto
     this.config = config
     this.modoActual = modoInicial
+    // Récord a superar que muestra la barra del HUD (0 = usar hitos)
+    this.meta = 0
 
     this.estrellas = Array.from({ length: 60 }, () => ({
       x: Math.random() * ancho,
@@ -2579,12 +2585,20 @@ export class EndlessRunner {
     ctx.globalAlpha = 1
     ctx.shadowBlur = 0
 
+    // El personaje del modo destino, en miniatura (antes era un emoji, que
+    // cada sistema operativo dibuja distinto)
+    const cx = portal.x + portal.ancho / 2
+    const cy = portal.y + portal.alto / 2
+    ctx.save()
+    ctx.translate(cx, cy - 8)
+    ctx.scale(0.55, 0.55)
+    dibujarForma(ctx, portal.modoDestino, -18, -18, 36, 36, modo.color, 0)
+    ctx.restore()
+
     ctx.textAlign = 'center'
     ctx.fillStyle = modo.color
-    ctx.font = '28px sans-serif'
-    ctx.fillText(modo.icono, portal.x + portal.ancho / 2, portal.y + portal.alto / 2)
-    ctx.font = '10px "JetBrains Mono", monospace'
-    ctx.fillText(modo.nombre.toUpperCase(), portal.x + portal.ancho / 2, portal.y + portal.alto / 2 + 22)
+    ctx.font = 'bold 9px "JetBrains Mono", monospace'
+    ctx.fillText(modo.nombre.toUpperCase(), cx, cy + 24)
     ctx.textAlign = 'left'
     ctx.restore()
   }
@@ -2690,30 +2704,32 @@ export class EndlessRunner {
     ctx.textAlign = 'left'
     ctx.fillText(this.puntaje.toString().padStart(5, '0'), 12, 18)
 
-    // Barra de progreso
-    const pct = Math.min(100, Math.floor(this.puntaje / 20))
+    // Barra de meta: avanza hacia tu récord de la sesión (this.meta, lo pone
+    // GameCanvas) o, si todavía no tienes, hacia el próximo hito
+    const conRecord = this.meta > 0
+    const meta = conRecord ? this.meta : (HITOS.find((h) => h > this.puntaje) ?? HITOS[HITOS.length - 1])
+    const superado = conRecord && this.puntaje > this.meta
+    const colorBarra = superado ? '#fbbf24' : '#22d3ee'
     const barX = 80
-    const barW = w - 200
-    const barH = 3
+    const barW = w - 260
     ctx.fillStyle = '#ffffff15'
     ctx.beginPath()
-    ctx.roundRect(barX, 12, barW, barH, 2)
+    ctx.roundRect(barX, 12, barW, 3, 2)
     ctx.fill()
-    ctx.fillStyle = '#22d3ee'
+    ctx.fillStyle = colorBarra
     ctx.shadowBlur = 4
-    ctx.shadowColor = '#22d3ee'
+    ctx.shadowColor = colorBarra
     ctx.beginPath()
-    ctx.roundRect(barX, 12, (barW * pct) / 100, barH, 2)
+    ctx.roundRect(barX, 12, barW * Math.min(1, this.puntaje / meta), 3, 2)
     ctx.fill()
     ctx.shadowBlur = 0
 
-    // Porcentaje
-    ctx.fillStyle = '#22d3ee'
-    ctx.font = 'bold 11px Inter, system-ui'
+    ctx.fillStyle = colorBarra
+    ctx.font = 'bold 10px "JetBrains Mono", monospace'
     ctx.textAlign = 'left'
-    ctx.fillText(`${pct}%`, barX + barW + 8, 18)
+    ctx.fillText(superado ? '¡NUEVO RÉCORD!' : `${conRecord ? 'RÉCORD' : 'META'} ${meta}`, barX + barW + 10, 18)
 
-    // Badge del modo actual
+    // Badge del modo actual, con el personaje en miniatura
     const modo = MODOS[this.modoActual]
     if (modo) {
       const badgeX = w - 72
@@ -2721,10 +2737,15 @@ export class EndlessRunner {
       ctx.beginPath()
       ctx.roundRect(badgeX, 6, 64, 18, 9)
       ctx.fill()
+      ctx.save()
+      ctx.translate(badgeX + 12, 15)
+      ctx.scale(0.24, 0.24)
+      dibujarForma(ctx, this.modoActual, -18, -18, 36, 36, modo.color, 0)
+      ctx.restore()
       ctx.fillStyle = modo.color
-      ctx.font = 'bold 10px Inter, system-ui'
+      ctx.font = 'bold 9px Inter, system-ui'
       ctx.textAlign = 'center'
-      ctx.fillText(`${modo.icono} ${modo.nombre.toUpperCase()}`, badgeX + 32, 18)
+      ctx.fillText(modo.nombre.toUpperCase(), badgeX + 38, 18)
       ctx.textAlign = 'left'
     }
 
