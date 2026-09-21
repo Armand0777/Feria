@@ -10,12 +10,12 @@ function dibujarEtiqueta(ctx, nombre, config, offsetX, ancho) {
   ctx.arc(offsetX + 10, 14, 4, 0, Math.PI * 2)
   ctx.fill()
 
-  ctx.font = 'bold 11px monospace'
+  ctx.font = 'bold 11px "JetBrains Mono", monospace'
   ctx.fillStyle = config.jugador.color
   ctx.textAlign = 'left'
   ctx.fillText(nombre, offsetX + 20, 18)
 
-  ctx.font = '10px monospace'
+  ctx.font = '10px "JetBrains Mono", monospace'
   ctx.fillStyle = '#9ca3af'
   ctx.textAlign = 'right'
   ctx.fillText('TOCA TU LADO', offsetX + ancho - 8, 18)
@@ -25,7 +25,7 @@ function dibujarEtiqueta(ctx, nombre, config, offsetX, ancho) {
 
 function dibujarPuntajeHeader(ctx, puntaje, config, offsetX, ancho) {
   ctx.save()
-  ctx.font = 'bold 14px monospace'
+  ctx.font = 'bold 14px "JetBrains Mono", monospace'
   ctx.fillStyle = '#ffffff'
   ctx.textAlign = 'center'
   ctx.fillText(`${puntaje}`, offsetX + ancho / 2, 44)
@@ -39,11 +39,11 @@ function dibujarCountdown(ctx, totalAncho, alto, configJ1, configJ2) {
   ctx.fillRect(0, 0, totalAncho, alto)
 
   ctx.textAlign = 'center'
-  ctx.font = 'bold 16px monospace'
+  ctx.font = 'bold 16px "JetBrains Mono", monospace'
   ctx.fillStyle = '#22d3ee'
   ctx.fillText('TOCA TU LADO DE LA PANTALLA PARA INICIAR', totalAncho / 2, alto / 2 - 10)
 
-  ctx.font = 'bold 13px monospace'
+  ctx.font = 'bold 13px "JetBrains Mono", monospace'
   ctx.fillStyle = configJ1.jugador.color
   ctx.fillText('J1 ◄ TOCA AQUÍ', totalAncho / 4, alto / 2 + 20)
 

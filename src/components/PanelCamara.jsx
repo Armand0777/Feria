@@ -206,7 +206,7 @@ export default function PanelCamara({ tipo, onPresionar, onSoltar }) {
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 700 }}>
           <span ref={etiquetaRef}>—</span>
-          <span ref={porcentajeRef} style={{ fontFamily: 'monospace', color: 'var(--muted)' }}>
+          <span ref={porcentajeRef} style={{ fontFamily: 'var(--font-mono)', color: 'var(--muted)' }}>
             0%
           </span>
         </div>
@@ -240,7 +240,7 @@ export default function PanelCamara({ tipo, onPresionar, onSoltar }) {
             display: 'flex',
             justifyContent: 'space-between',
             marginTop: 6,
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-mono)',
             fontSize: 10,
             color: 'var(--muted)',
           }}

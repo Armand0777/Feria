@@ -1,3 +1,5 @@
+import Icono from '../components/Iconos'
+
 const FONDO_GRID = {
   backgroundColor: '#0a0a1a',
   backgroundImage:
@@ -30,7 +32,10 @@ export default function ResultadoVersus({ resultado, onRevancha, onMenuPrincipal
   const diferencia = Math.abs(puntajeJ1 - puntajeJ2)
 
   return (
-    <div className="w-full p-8" style={{ ...FONDO_GRID, borderRadius: 12 }}>
+    <div
+      className="mx-auto w-full max-w-2xl p-8"
+      style={{ ...FONDO_GRID, borderRadius: 12, border: '1px solid var(--border)' }}
+    >
       <div className="mb-6 flex flex-col items-center gap-2 text-center">
         <span style={{ fontSize: 64, color: colorGanador }}>🏆</span>
         <h1
@@ -74,19 +79,11 @@ export default function ResultadoVersus({ resultado, onRevancha, onMenuPrincipal
       <p className="mb-6 text-center text-sm italic text-gray-300">{obtenerMensaje(diferencia)}</p>
 
       <div className="flex justify-center gap-3">
-        <button
-          onClick={onRevancha}
-          className="font-mono font-bold text-white"
-          style={{ background: '#6366f1', border: 'none', borderRadius: 8, padding: '12px 28px', cursor: 'pointer' }}
-        >
-          ⚔ REVANCHA
+        <button onClick={onRevancha} className="btn-primary btn-lg">
+          <Icono nombre="reintentar" /> REVANCHA
         </button>
-        <button
-          onClick={onMenuPrincipal}
-          className="font-mono font-bold text-white"
-          style={{ background: 'transparent', border: '1px solid #475569', borderRadius: 8, padding: '12px 28px', cursor: 'pointer' }}
-        >
-          🏠 MENÚ PRINCIPAL
+        <button onClick={onMenuPrincipal} className="btn-secondary btn-lg">
+          <Icono nombre="volver" /> MENÚ PRINCIPAL
         </button>
       </div>
     </div>

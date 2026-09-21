@@ -292,7 +292,7 @@ export default function GameCanvas({
           <div className="absolute inset-0 flex items-center justify-center" style={{ pointerEvents: 'none' }}>
             <p
               style={{
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: 16,
                 color: '#22d3ee',
                 textShadow: '0 0 10px #22d3eeaa',
@@ -311,7 +311,7 @@ export default function GameCanvas({
           >
             <p
               style={{
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 fontSize: 'clamp(22px, 6vw, 36px)',
                 color: '#22d3ee',
@@ -323,7 +323,7 @@ export default function GameCanvas({
             </p>
             <button
               onClick={() => cambiarPausa(false)}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary"
               style={{ padding: '10px 24px' }}
             >
               <Icono nombre="play" /> CONTINUAR
@@ -353,7 +353,7 @@ export default function GameCanvas({
 
             <p
               style={{
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 fontSize: 'clamp(20px, 6vw, 36px)',
                 color: '#ef4444',
@@ -366,7 +366,7 @@ export default function GameCanvas({
 
             <p
               style={{
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 fontSize: 'clamp(28px, 9vw, 52px)',
                 color: 'white',
@@ -393,29 +393,17 @@ export default function GameCanvas({
             <div className="mt-2 flex flex-wrap justify-center gap-3 px-4" style={{ zIndex: 1 }}>
               <button
                 onClick={manejarReintentar}
-                className="font-mono font-bold text-white"
-                style={{
-                  background: '#6366f1',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: 'clamp(8px,3vw,12px) clamp(16px,5vw,28px)',
-                  cursor: 'pointer',
-                }}
+                className="btn-primary"
+                style={{ padding: 'clamp(8px,3vw,12px) clamp(16px,5vw,28px)' }}
               >
-                ↺ REINTENTAR
+                <Icono nombre="reintentar" /> REINTENTAR
               </button>
               <button
                 onClick={onSalir}
-                className="font-mono font-bold text-white"
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #475569',
-                  borderRadius: 8,
-                  padding: 'clamp(8px,3vw,12px) clamp(16px,5vw,28px)',
-                  cursor: 'pointer',
-                }}
+                className="btn-secondary"
+                style={{ padding: 'clamp(8px,3vw,12px) clamp(16px,5vw,28px)', color: 'var(--text)' }}
               >
-                ✕ SALIR
+                <Icono nombre="salir" /> SALIR
               </button>
             </div>
           </div>
@@ -432,8 +420,7 @@ export default function GameCanvas({
           <button
             onClick={() => cambiarPausa()}
             disabled={!enCurso}
-            className="btn-secondary flex items-center gap-2"
-            style={{ padding: '6px 12px', opacity: enCurso ? 1 : 0.4, cursor: enCurso ? 'pointer' : 'default' }}
+            className="btn-secondary btn-sm"
             title="Pausa (P)"
           >
             <Icono nombre={pausado ? 'play' : 'pausa'} tamano={14} />
@@ -441,8 +428,7 @@ export default function GameCanvas({
           </button>
           <button
             onClick={cambiarSonido}
-            className="btn-secondary flex items-center gap-2"
-            style={{ padding: '6px 12px' }}
+            className="btn-secondary btn-sm"
             title="Sonido (M)"
           >
             <Icono nombre={sonido ? 'volumen' : 'silencio'} tamano={14} />

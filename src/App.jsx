@@ -9,7 +9,6 @@ import VersusSelector from './components/VersusSelector'
 import VersusCanvas from './components/VersusCanvas'
 import ResultadoVersus from './pages/ResultadoVersus'
 import Ranking from './components/Ranking'
-import CodigoQR from './components/CodigoQR'
 import TicTacToeSelector from './components/TicTacToeSelector'
 import TicTacToe from './components/TicTacToe'
 import PanelCamara from './components/PanelCamara'
@@ -90,29 +89,28 @@ function App() {
   return (
     <div className="min-h-screen" style={{ background: '#0a0a1a' }}>
       {/* Barra superior */}
-      <div
-        className="flex items-center justify-between px-4"
-        style={{ height: 40, background: '#0f172a', borderBottom: '1px solid #1e293b' }}
-      >
-        <span className="font-mono text-xs font-bold" style={{ color: '#6366f1' }}>
-          GEO RUNNER
+      <header className="topbar">
+        <span className="topbar-logo">GEO RUNNER</span>
+        <span className="topbar-center">{config.jugador.nombre}</span>
+        <span className="topbar-right" style={{ color: mejorPuntaje > 0 ? 'var(--gold)' : '#475569' }}>
+          {mejorPuntaje > 0 ? `MEJOR ${mejorPuntaje}` : '—'}
         </span>
-        <span className="text-xs text-gray-400">{config.jugador.nombre}</span>
-        <span className="font-mono text-xs" style={{ color: mejorPuntaje > 0 ? '#fbbf24' : '#475569' }}>
-          {mejorPuntaje > 0 ? `MEJOR: ${mejorPuntaje}` : '—'}
-        </span>
-      </div>
+      </header>
 
       <div className="px-4 py-8 text-white">
         {pantalla === 'configurar' && (
           <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
             <ConfigPanel config={config} onConfigChange={setConfig} />
-            <GameSelector
-              config={config}
-              onStart={iniciarPartida}
-              onVersus={() => setPantalla('versus-config')}
-              onTicTacToe={() => setPantalla('tictactoe-config')}
-            />
+            {/* En el celular va primero: el título y el botón JUGAR se ven
+                sin tener que bajar por toda la configuración */}
+            <div className="order-first lg:order-none">
+              <GameSelector
+                config={config}
+                onStart={iniciarPartida}
+                onVersus={() => setPantalla('versus-config')}
+                onTicTacToe={() => setPantalla('tictactoe-config')}
+              />
+            </div>
           </div>
         )}
 
@@ -158,7 +156,7 @@ function App() {
         )}
 
         {pantalla === 'resultado' && (
-          <div className="flex w-full flex-col items-center gap-8">
+          <div className="mx-auto grid w-full max-w-5xl items-start gap-8 lg:grid-cols-2">
             <ResultadoFinal
               config={config}
               puntaje={ultimoPuntaje}
@@ -215,9 +213,6 @@ function App() {
         )}
       </div>
 
-      {/* El QR invita a jugar desde el celular: solo tiene sentido en la
-          pantalla de inicio (y CodigoQR se oculta en pantallas chicas) */}
-      {pantalla === 'configurar' && <CodigoQR />}
     </div>
   )
 }

@@ -16,7 +16,9 @@ function tiempoTranscurrido(fechaIso) {
   const minutos = Math.floor(segundos / 60)
   if (minutos < 60) return `hace ${minutos} min`
   const horas = Math.floor(minutos / 60)
-  return `hace ${horas} h`
+  if (horas < 24) return `hace ${horas} h`
+  const dias = Math.floor(horas / 24)
+  return dias === 1 ? 'hace 1 día' : `hace ${dias} días`
 }
 
 function inicioDeHoy() {
@@ -126,14 +128,16 @@ export default function RankingTV() {
           <span>🏆</span> RANKING EN VIVO
         </h1>
         <p style={{ fontSize: 14, color: '#64748b' }}>Endless Runner — Estación 1</p>
-        <p style={{ fontFamily: 'monospace', fontSize: 14, color: '#6366f1' }}>
-          {jugadoresHoy} jugadores hoy
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: 14, color: '#6366f1' }}>
+          {jugadoresHoy === 1 ? '1 partida hoy' : `${jugadoresHoy} partidas hoy`}
         </p>
       </header>
 
       {/* Cuerpo principal */}
+      {/* Las 10 filas se reparten el alto disponible: nunca se desbordan,
+          sea cual sea el tamaño del televisor */}
       <main
-        className="flex flex-col justify-center gap-1 px-12"
+        className="flex flex-col px-12 py-3"
         style={{ height: '70vh', background: '#09090f' }}
       >
         {filas.map((p, i) => {
@@ -143,7 +147,7 @@ export default function RankingTV() {
               <div
                 key={`vacio-${i}`}
                 className="flex items-center gap-6 rounded-lg px-6"
-                style={{ padding: '12px 0', borderBottom: '.5px solid #ffffff05', color: '#475569' }}
+                style={{ flex: 1, minHeight: 0, borderBottom: '1px solid #ffffff08', color: '#475569' }}
               >
                 <span style={{ ...estiloPos, width: 80 }}>{textoPosicion(i)}</span>
                 <span style={{ fontSize: 14 }}>--- Sin jugador ---</span>
@@ -157,7 +161,7 @@ export default function RankingTV() {
               className={`flex items-center gap-6 rounded-lg px-6 ${
                 filaNuevaId === p.id ? 'fila-nueva' : ''
               }`}
-              style={{ padding: '12px 0', borderBottom: '.5px solid #ffffff05' }}
+              style={{ flex: 1, minHeight: 0, borderBottom: '1px solid #ffffff08' }}
             >
               <span style={{ ...estiloPos, width: 80 }}>{textoPosicion(i)}</span>
 

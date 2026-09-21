@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Icono from './Iconos'
 
 const LINEAS = [
   [0, 1, 2],
@@ -179,8 +180,8 @@ export default function TicTacToe({ modo, onVolver }) {
         )}
       </div>
 
-      <button className="btn-secondary" onClick={onVolver} style={{ width: '100%', padding: '10px 0' }}>
-        ← VOLVER AL MENÚ
+      <button className="btn-secondary" onClick={onVolver} style={{ width: '100%' }}>
+        <Icono nombre="volver" tamano={14} /> VOLVER AL MENÚ
       </button>
     </div>
   )

@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const MEDALLAS = {
-  0: { texto: '1°', color: '#facc15' },
-  1: { texto: '2°', color: '#cbd5e1' },
-  2: { texto: '3°', color: '#fb923c' },
-}
+const COLOR_PUESTO = ['#fbbf24', '#cbd5e1', '#fb923c']
 
 export default function Ranking() {
   const [puntajes, setPuntajes] = useState([])
@@ -44,44 +40,57 @@ export default function Ranking() {
   }, [])
 
   return (
-    <div className="w-full rounded-lg bg-slate-800 p-6 text-white">
-      <h2 className="mb-4 flex items-center gap-2 text-xl font-bold">
-        <span>🏆</span> Ranking en vivo
-      </h2>
+    <div className="card-dark w-full" style={{ padding: 18 }}>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="label-section" style={{ margin: 0 }}>
+          Ranking de la feria
+        </span>
+        <span
+          className="flex items-center gap-1.5"
+          style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: 'var(--success)' }}
+        >
+          <span className="punto-vivo" /> EN VIVO
+        </span>
+      </div>
 
       {cargando ? (
-        <p className="text-sm text-gray-400">Cargando...</p>
+        <p style={{ fontSize: 13, color: 'var(--muted)' }}>Cargando…</p>
       ) : puntajes.length === 0 ? (
-        <p className="text-sm text-gray-400">Aún no hay puntajes. ¡Sé el primero!</p>
+        <p style={{ fontSize: 13, color: 'var(--muted)' }}>Aún no hay puntajes. ¡Sé el primero!</p>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {puntajes.map((p, i) => {
-            const medalla = MEDALLAS[i]
-            return (
-              <li
-                key={p.id}
-                className={`flex items-center justify-between rounded-md px-3 py-2 ${
-                  medalla ? 'bg-slate-700' : 'bg-slate-900/40'
-                }`}
+        <ol className="flex flex-col gap-1">
+          {puntajes.map((p, i) => (
+            <li
+              key={p.id}
+              className="grid items-center gap-3 rounded-md px-3 py-2"
+              style={{
+                gridTemplateColumns: '28px 10px 1fr auto',
+                background: i < 3 ? 'var(--surface2)' : 'transparent',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 13,
+                  fontWeight: 800,
+                  color: COLOR_PUESTO[i] ?? 'var(--muted)',
+                }}
               >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="w-8 font-bold"
-                    style={{ color: medalla ? medalla.color : '#94a3b8' }}
-                  >
-                    {medalla ? medalla.texto : `${i + 1}°`}
-                  </span>
-                  <span
-                    className="h-3 w-3 rounded-full border border-white/30"
-                    style={{ backgroundColor: p.color }}
-                  />
-                  <span className="font-medium">{p.nombre}</span>
-                </div>
-                <span className="font-mono font-bold">{p.puntaje}</span>
-              </li>
-            )
-          })}
-        </ul>
+                {i + 1}°
+              </span>
+              <span
+                className="rounded-full"
+                style={{ width: 10, height: 10, background: p.color, boxShadow: `0 0 6px ${p.color}` }}
+              />
+              <span className="truncate" style={{ fontSize: 14, fontWeight: i < 3 ? 700 : 500 }}>
+                {p.nombre}
+              </span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 700 }}>
+                {p.puntaje.toLocaleString()}
+              </span>
+            </li>
+          ))}
+        </ol>
       )}
     </div>
   )

@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { contextoHD } from '../lib/canvasHD'
+import Icono from './Iconos'
+import CodigoQR from './CodigoQR'
 
 // Tamaño lógico de la demo animada
 const DEMO_W = 432
@@ -138,57 +140,17 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
         </div>
 
         {/* Botones */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          <button
-            className="btn-primary"
-            onClick={onStart}
-            style={{
-              flex: 1,
-              padding: '14px 0',
-              fontSize: 16,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            }}
-          >
-            ▶ JUGAR AHORA
+        <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+          <button className="btn-primary btn-lg" onClick={onStart} style={{ flex: 1 }}>
+            <Icono nombre="play" /> JUGAR AHORA
           </button>
-          <button
-            onClick={onVersus}
-            style={{
-              padding: '14px 18px',
-              background: 'transparent',
-              border: '1px solid #f9731644',
-              borderRadius: 8,
-              color: 'var(--orange)',
-              fontFamily: 'inherit',
-              fontWeight: 700,
-              fontSize: 13,
-              cursor: 'pointer',
-            }}
-          >
-            ⚔ VERSUS
+          <button className="btn-accent btn-lg" onClick={onVersus}>
+            <Icono nombre="versus" /> VERSUS
           </button>
         </div>
 
-        <button
-          onClick={onTicTacToe}
-          style={{
-            width: '100%',
-            padding: '10px 0',
-            marginBottom: 16,
-            background: 'transparent',
-            border: '1px solid var(--border2)',
-            borderRadius: 8,
-            color: 'var(--muted)',
-            fontFamily: 'inherit',
-            fontWeight: 700,
-            fontSize: 12,
-            cursor: 'pointer',
-          }}
-        >
-          ✕○ ESTACIÓN 2 · 3 EN RAYA
+        <button className="btn-secondary" onClick={onTicTacToe} style={{ width: '100%', marginBottom: 16 }}>
+          <Icono nombre="cuadricula" tamano={14} /> ESTACIÓN 2 · 3 EN RAYA
         </button>
 
         {/* Instrucciones */}
@@ -206,7 +168,7 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
               >
                 <span
                   style={{
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     fontSize: 11,
                     fontWeight: 700,
                     background: 'var(--surface2)',
@@ -238,6 +200,10 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
             </span>
           </div>
         )}
+
+        <div style={{ marginTop: 16 }}>
+          <CodigoQR flotante={false} tamano={72} />
+        </div>
       </div>
     </div>
   )

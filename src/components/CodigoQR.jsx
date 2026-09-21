@@ -1,11 +1,36 @@
 // URL pública del juego — actualizar aquí si cambia el dominio de despliegue
 export const URL_JUEGO = 'https://feria-opal.vercel.app/'
 
-export default function CodigoQR({ tamano = 64 }) {
+// Dos formas: `flotante` (esquina fija, para la pantalla de TV) o como
+// tarjeta dentro de la página (inicio). En celulares no se muestra: quien lo
+// ve ya está jugando desde el teléfono.
+export default function CodigoQR({ tamano = 64, flotante = true }) {
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${tamano * 2}x${tamano * 2}&data=${encodeURIComponent(URL_JUEGO)}`
 
-  // En celulares no se muestra: quien lo ve ya está jugando desde el teléfono,
-  // y el recuadro fijo tapaba contenido
+  const imagen = (
+    <img
+      src={qrSrc}
+      alt="Código QR para jugar"
+      width={tamano}
+      height={tamano}
+      style={{ display: 'block', borderRadius: 4, background: '#fff', padding: 3, flexShrink: 0 }}
+    />
+  )
+
+  if (!flotante) {
+    return (
+      <div className="card-dark hidden items-center gap-4 md:flex">
+        {imagen}
+        <div>
+          <span className="label-section">Juega desde tu celular</span>
+          <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+            Escanea el código con la cámara y juega en tu teléfono. Tu puntaje entra al mismo ranking.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       className="hidden md:flex"
@@ -22,16 +47,10 @@ export default function CodigoQR({ tamano = 64 }) {
         padding: 6,
       }}
     >
-      <img
-        src={qrSrc}
-        alt="Código QR para jugar"
-        width={tamano}
-        height={tamano}
-        style={{ display: 'block', borderRadius: 4, background: '#fff' }}
-      />
+      {imagen}
       <span
         style={{
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: '#94a3b8',
           maxWidth: 70,

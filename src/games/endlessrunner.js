@@ -2473,7 +2473,7 @@ export class EndlessRunner {
     }
 
     ctx.fillStyle = color
-    ctx.font = 'bold 14px monospace'
+    ctx.font = 'bold 14px "JetBrains Mono", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(icono, t.x + t.ancho / 2, t.y - 8)
     ctx.textAlign = 'left'
@@ -2514,7 +2514,7 @@ export class EndlessRunner {
     ctx.fillRect(p.x + 4, p.y + 1, p.ancho - 8, 3)
 
     ctx.fillStyle = '#c4b5fd'
-    ctx.font = '10px monospace'
+    ctx.font = '10px "JetBrains Mono", monospace'
     ctx.textAlign = 'center'
     ctx.fillText(p.parpadea ? '◐' : '↕', p.x + 10, p.y - 4)
     ctx.fillText(p.parpadea ? '◐' : '↕', p.x + p.ancho - 10, p.y - 4)
@@ -2554,7 +2554,7 @@ export class EndlessRunner {
     ctx.fill()
 
     ctx.fillStyle = '#1f2937'
-    ctx.font = `bold ${Math.round(o.radio)}px monospace`
+    ctx.font = `bold ${Math.round(o.radio)}px "JetBrains Mono", monospace`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
     ctx.fillText(icono, 0, 1)
@@ -2583,7 +2583,7 @@ export class EndlessRunner {
     ctx.fillStyle = modo.color
     ctx.font = '28px sans-serif'
     ctx.fillText(modo.icono, portal.x + portal.ancho / 2, portal.y + portal.alto / 2)
-    ctx.font = '10px monospace'
+    ctx.font = '10px "JetBrains Mono", monospace'
     ctx.fillText(modo.nombre.toUpperCase(), portal.x + portal.ancho / 2, portal.y + portal.alto / 2 + 22)
     ctx.textAlign = 'left'
     ctx.restore()
@@ -2664,7 +2664,7 @@ export class EndlessRunner {
 
     ctx.save()
     ctx.globalAlpha = Math.min(1, this.mensajeModoTimer / 30)
-    ctx.font = 'bold 22px monospace'
+    ctx.font = 'bold 22px "JetBrains Mono", monospace'
     ctx.fillStyle = color
     ctx.shadowBlur = 10
     ctx.shadowColor = color
@@ -2730,7 +2730,7 @@ export class EndlessRunner {
 
     // Velocidad (pequeño, debajo del puntaje)
     ctx.fillStyle = '#64748b'
-    ctx.font = '10px monospace'
+    ctx.font = '10px "JetBrains Mono", monospace'
     ctx.fillText(`vel ${this.velocidad.toFixed(1)}`, 12, this.alto - 8)
 
     ctx.restore()

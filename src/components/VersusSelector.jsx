@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { MODOS, NIVELES } from '../games/endlessrunner'
 import { contextoHD } from '../lib/canvasHD'
+import Icono from './Iconos'
 
 const defaultJ1 = {
   jugador: { nombre: 'Jugador 1', color: '#6366f1', colorFondo: '#0a0a1a' },
@@ -75,41 +76,52 @@ function ColumnaJugador({ titulo, controles, colorBorde, config, onChange }) {
 
   return (
     <div
-      className="flex flex-1 flex-col items-center gap-3 p-5"
-      style={{ background: '#0f172a', border: `1px solid ${colorBorde}`, borderRadius: 12 }}
+      className="card-dark flex flex-1 flex-col gap-4"
+      style={{ padding: 20, borderTop: `3px solid ${colorBorde}` }}
     >
-      <h3 className="font-mono font-bold" style={{ color: colorBorde }}>
-        {titulo}
-      </h3>
-      <p className="font-mono text-xs text-gray-400">Controles: {controles}</p>
+      <div className="flex items-center justify-between">
+        <h3 style={{ fontSize: 16, fontWeight: 800, letterSpacing: '.06em', color: colorBorde }}>{titulo}</h3>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--accent2)',
+            background: 'var(--surface2)',
+            padding: '2px 8px',
+            borderRadius: 4,
+          }}
+        >
+          {controles}
+        </span>
+      </div>
 
-      <PreviewCubo color={config.jugador.color} />
+      <div className="flex items-center gap-4">
+        <PreviewCubo color={config.jugador.color} />
+        <div className="flex flex-1 flex-col gap-3">
+          <label className="flex flex-col">
+            <span className="label-section">Nombre</span>
+            <input
+              type="text"
+              value={config.jugador.nombre}
+              maxLength={15}
+              onChange={(e) => actualizarJugador('nombre', e.target.value)}
+              style={{ width: '100%' }}
+            />
+          </label>
+          <label className="flex items-center gap-3">
+            <input
+              type="color"
+              value={config.jugador.color}
+              onChange={(e) => actualizarJugador('color', e.target.value)}
+            />
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>Color del personaje</span>
+          </label>
+        </div>
+      </div>
 
-      <label className="flex w-full flex-col gap-1">
-        <span className="font-mono text-xs text-gray-400">Nombre</span>
-        <input
-          type="text"
-          value={config.jugador.nombre}
-          maxLength={15}
-          onChange={(e) => actualizarJugador('nombre', e.target.value)}
-          className="rounded-md px-3 py-2 font-mono text-white"
-          style={{ background: '#1e293b', border: '1px solid #334155' }}
-        />
-      </label>
-
-      <label className="flex w-full flex-col gap-1">
-        <span className="font-mono text-xs text-gray-400">Color del personaje</span>
-        <input
-          type="color"
-          value={config.jugador.color}
-          onChange={(e) => actualizarJugador('color', e.target.value)}
-          className="cursor-pointer border-none"
-          style={{ width: 44, height: 44 }}
-        />
-      </label>
-
-      <div className="flex w-full flex-col gap-2">
-        <span className="font-mono text-xs text-gray-400">Modo inicial</span>
+      <div className="flex w-full flex-col">
+        <span className="label-section">Modo inicial</span>
         <div className="grid grid-cols-3 gap-2">
           {Object.values(MODOS).map((modo) => {
             const seleccionado = config.modoInicial === modo.id
@@ -132,8 +144,8 @@ function ColumnaJugador({ titulo, controles, colorBorde, config, onChange }) {
         </div>
       </div>
 
-      <div className="flex w-full flex-col gap-2">
-        <span className="font-mono text-xs text-gray-400">Nivel de dificultad</span>
+      <div className="flex w-full flex-col">
+        <span className="label-section">Nivel de dificultad</span>
         <div className="grid grid-cols-4 gap-2">
           {Object.values(NIVELES).map((n) => {
             const seleccionado = (config.nivel || 'facil') === n.id
@@ -172,7 +184,16 @@ export default function VersusSelector({ onIniciar, onVolver }) {
   const listo = configJ1.jugador.nombre.trim() !== '' && configJ2.jugador.nombre.trim() !== ''
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
+      <div className="text-center">
+        <h1 style={{ fontSize: 32, fontWeight: 900, lineHeight: 1 }}>
+          MODO <span style={{ color: 'var(--orange)' }}>VERSUS</span>
+        </h1>
+        <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>
+          Dos jugadores en la misma pantalla · gana quien sobreviva más
+        </p>
+      </div>
+
       <div className="flex flex-col items-stretch gap-4 md:flex-row">
         <ColumnaJugador
           titulo="JUGADOR 1"
@@ -183,7 +204,7 @@ export default function VersusSelector({ onIniciar, onVolver }) {
         />
 
         <div className="flex items-center justify-center px-2">
-          <span className="font-mono text-3xl font-bold text-gray-500">VS</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 28, fontWeight: 800, color: '#475569' }}>VS</span>
         </div>
 
         <ColumnaJugador
@@ -196,37 +217,17 @@ export default function VersusSelector({ onIniciar, onVolver }) {
       </div>
 
       <div className="flex justify-center gap-3">
-        <button
-          type="button"
-          onClick={onVolver}
-          className="font-mono font-bold text-white"
-          style={{
-            background: 'transparent',
-            border: '1px solid #475569',
-            borderRadius: 8,
-            padding: '12px 24px',
-            cursor: 'pointer',
-          }}
-        >
-          ← VOLVER
+        <button type="button" onClick={onVolver} className="btn-secondary btn-lg">
+          <Icono nombre="volver" /> VOLVER
         </button>
 
         <button
           type="button"
           disabled={!listo}
           onClick={() => onIniciar(configJ1, configJ2)}
-          className="font-mono font-bold text-white"
-          style={{
-            background: listo ? '#6366f1' : '#334155',
-            border: 'none',
-            borderRadius: 8,
-            padding: '12px 32px',
-            fontSize: 16,
-            cursor: listo ? 'pointer' : 'not-allowed',
-            opacity: listo ? 1 : 0.6,
-          }}
+          className="btn-primary btn-lg"
         >
-          ⚔ ¡COMENZAR VERSUS!
+          <Icono nombre="versus" /> ¡COMENZAR VERSUS!
         </button>
       </div>
     </div>

@@ -103,7 +103,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
                 value={config.jugador.color}
                 onChange={(e) => set('jugador.color', e.target.value)}
               />
-              <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)' }}>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--muted)' }}>
                 {config.jugador.color}
               </span>
             </div>
@@ -165,7 +165,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
               value={config.jugador.colorFondo}
               onChange={(e) => set('jugador.colorFondo', e.target.value)}
             />
-            <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--muted)' }}>
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--muted)' }}>
               {config.jugador.colorFondo}
             </span>
           </div>
@@ -206,7 +206,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
                 </span>
                 <span
                   style={{
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     fontSize: 12,
                     fontWeight: 700,
                     color: 'var(--accent)',

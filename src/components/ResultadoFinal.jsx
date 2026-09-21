@@ -1,3 +1,5 @@
+import Icono from './Iconos'
+
 const LOGROS = [
   { id: 'primer_salto', label: 'PRIMER SALTO', req: () => true, color: '#22d3ee' },
   { id: 'superviviente', label: 'SUPERVIVIENTE', req: (p) => p >= 100, color: '#a855f7' },
@@ -128,15 +130,11 @@ export default function ResultadoFinal({
 
         {/* Botones finales */}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className="btn-primary"
-            onClick={onJugarDeNuevo}
-            style={{ flex: 1, padding: '12px 0', fontSize: 14 }}
-          >
-            ▶ JUGAR DE NUEVO
+          <button className="btn-primary" onClick={onJugarDeNuevo} style={{ flex: 1, padding: '12px 0' }}>
+            <Icono nombre="play" /> JUGAR DE NUEVO
           </button>
           <button className="btn-secondary" onClick={onCambiarConfig} style={{ padding: '12px 18px' }}>
-            ⚙ Config
+            <Icono nombre="ajustes" tamano={14} /> Configurar
           </button>
         </div>
       </div>

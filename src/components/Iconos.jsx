@@ -16,6 +16,15 @@ const TRAZOS = {
   ),
   reintentar: <path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5" />,
   salir: <path d="M6 6l12 12M18 6L6 18" />,
+  versus: <path d="M4 4l9 9M20 4l-9 9M6 15l3 3M18 15l-3 3M4 20l3-3M20 20l-3-3" />,
+  cuadricula: <path d="M9 4v16M15 4v16M4 9h16M4 15h16" />,
+  ajustes: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1" />
+    </>
+  ),
+  volver: <path d="M15 5l-7 7 7 7" />,
 }
 
 export default function Icono({ nombre, tamano = 16 }) {
