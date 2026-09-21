@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { EndlessRunnerVersus } from '../games/endlessrunnerVersus'
 import { crearReloj, pasosPendientes } from '../lib/pasoFijo'
+import { observarResolucion } from '../lib/canvasHD'
+
+// Tamaño lógico del versus (el canvas real puede tener más píxeles)
+const ANCHO = 900
+const ALTO = 320
 
 export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
   const canvasRef = useRef(null)
@@ -16,7 +21,7 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const juego = new EndlessRunnerVersus(canvas, configJ1, configJ2)
+    const juego = new EndlessRunnerVersus(canvas, configJ1, configJ2, { ancho: ANCHO, alto: ALTO })
     juego.reset()
     juego.registrarControles()
     juegoRef.current = juego
@@ -57,6 +62,8 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
       juego.limpiarControles()
     }
   }, [configJ1, configJ2])
+
+  useEffect(() => observarResolucion(canvasRef.current, () => juegoRef.current?.dibujar()), [])
 
   useEffect(() => {
     if (!terminado || !resultado) return
@@ -115,7 +122,7 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
   const xRelativaAlCanvas = (clientX) => {
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()
-    return ((clientX - rect.left) / rect.width) * canvas.width
+    return ((clientX - rect.left) / rect.width) * ANCHO
   }
 
   const onCanvasPresionar = (e) => {
@@ -156,10 +163,12 @@ export default function VersusCanvas({ configJ1, configJ2, onVersusEnd }) {
   return (
     <div className="mx-auto w-full">
       <div
-        className="relative w-full overflow-hidden"
+        className="relative mx-auto overflow-hidden"
         style={{
+          // Siempre en proporción 900:320; se limita por el alto de la
+          // pantalla dejando lugar a los botones grandes de abajo (190px)
+          width: 'min(100%, max(320px, calc((100dvh - 190px) * 900 / 320)))',
           aspectRatio: '900 / 320',
-          minHeight: 'clamp(220px, 45vh, 320px)',
           background: '#0a0a1a',
           border: '1px solid #6366f1',
           boxShadow: '0 0 16px #6366f133',

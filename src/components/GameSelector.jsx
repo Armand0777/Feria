@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import { contextoHD } from '../lib/canvasHD'
+
+// Tamaño lógico de la demo animada
+const DEMO_W = 432
+const DEMO_H = 90
 
 export default function GameSelector({ config, onStart, onVersus, onTicTacToe }) {
   const [record, setRecord] = useState(null)
@@ -21,27 +26,27 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = contextoHD(canvas, DEMO_W, DEMO_H)
     const demo = demoRef.current
 
     const loop = () => {
       frameRef.current = requestAnimationFrame(loop)
       demo.frame++
       ctx.fillStyle = config.jugador.colorFondo || '#09090f'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillRect(0, 0, DEMO_W, DEMO_H)
 
       // Suelo
       ctx.fillStyle = '#0f172a'
-      ctx.fillRect(0, canvas.height - 18, canvas.width, 18)
+      ctx.fillRect(0, DEMO_H - 18, DEMO_W, 18)
       ctx.fillStyle = '#6366f1'
-      ctx.fillRect(0, canvas.height - 19, canvas.width, 1.5)
+      ctx.fillRect(0, DEMO_H - 19, DEMO_W, 1.5)
 
       // Obstáculos demo (no matan)
       if (demo.frame % 80 === 0) {
         const tipos = ['bloque', 'pico']
         demo.obs.push({
           tipo: tipos[Math.floor(Math.random() * tipos.length)],
-          x: canvas.width,
+          x: DEMO_W,
           h: 20 + Math.random() * 25,
         })
       }
@@ -53,16 +58,16 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
           ctx.shadowBlur = 8
           ctx.shadowColor = '#a855f7'
           ctx.beginPath()
-          ctx.roundRect(o.x, canvas.height - 18 - o.h, 20, o.h, 3)
+          ctx.roundRect(o.x, DEMO_H - 18 - o.h, 20, o.h, 3)
           ctx.fill()
         } else {
           ctx.fillStyle = '#f97316'
           ctx.shadowBlur = 8
           ctx.shadowColor = '#f97316'
           ctx.beginPath()
-          ctx.moveTo(o.x, canvas.height - 18)
-          ctx.lineTo(o.x + 14, canvas.height - 18 - o.h)
-          ctx.lineTo(o.x + 28, canvas.height - 18)
+          ctx.moveTo(o.x, DEMO_H - 18)
+          ctx.lineTo(o.x + 14, DEMO_H - 18 - o.h)
+          ctx.lineTo(o.x + 28, DEMO_H - 18)
           ctx.closePath()
           ctx.fill()
         }
@@ -70,7 +75,7 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
       })
 
       // Cubo del jugador
-      const cubeY = canvas.height - 18 - 22
+      const cubeY = DEMO_H - 18 - 22
       ctx.fillStyle = config.jugador.color
       ctx.shadowBlur = 12
       ctx.shadowColor = config.jugador.color
@@ -192,6 +197,7 @@ export default function GameSelector({ config, onStart, onVersus, onTicTacToe })
             {[
               { key: 'ESPACIO / CLIC', desc: 'Saltar o activar' },
               { key: 'PORTALES', desc: 'Cambian tu modo de juego' },
+              { key: 'P / ESC', desc: 'Pausar la partida' },
               { key: 'M', desc: 'Silenciar / activar sonido' },
             ].map(({ key, desc }) => (
               <div

@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { MODOS, NIVELES } from '../games/endlessrunner'
 import { precargarModelo } from '../ia/modelos'
+import { contextoHD } from '../lib/canvasHD'
 
 const CONTROLES = [
   { id: 'teclado', icono: '⌨', nombre: 'Teclado', descripcion: 'Espacio o clic' },
@@ -17,7 +18,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
   useEffect(() => {
     const canvas = previewRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = contextoHD(canvas, 100, 100)
     const loop = () => {
       frameRef.current = requestAnimationFrame(loop)
       rotRef.current += 0.02
@@ -83,7 +84,7 @@ export default function ConfigPanel({ config, onConfigChange }) {
             ref={previewRef}
             width={100}
             height={100}
-            style={{ borderRadius: 10, border: '.5px solid var(--border)', flexShrink: 0 }}
+            style={{ width: 100, height: 100, borderRadius: 10, border: '.5px solid var(--border)', flexShrink: 0 }}
           />
           <div style={{ flex: 1 }}>
             <label className="label-section">NOMBRE</label>

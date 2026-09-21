@@ -2,9 +2,14 @@ import { useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { EndlessRunner } from '../games/endlessrunner'
 import { audio } from '../lib/audio'
 import { crearReloj, pasosPendientes } from '../lib/pasoFijo'
+import { observarResolucion } from '../lib/canvasHD'
 import Icono from './Iconos'
 
 const COLORES_PARTICULAS = ['#6366f1', '#22d3ee', '#a855f7']
+
+// Tamaño lógico del mundo (el canvas real puede tener más píxeles)
+const ANCHO = 700
+const ALTO = 320
 
 const TEXTO_INICIO = {
   teclado: 'PRESIONA ESPACIO O CLIC PARA INICIAR',
@@ -49,7 +54,7 @@ export default function GameCanvas({
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const juego = new EndlessRunner(canvas, config, config.modoInicial)
+    const juego = new EndlessRunner(canvas, config, config.modoInicial, { ancho: ANCHO, alto: ALTO })
     juego.corriendo = false
     juegoRef.current = juego
     gameOverEnviadoRef.current = false
@@ -97,6 +102,10 @@ export default function GameCanvas({
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
     }
   }, [config])
+
+  // Resolución nítida. Al cambiar de tamaño el canvas se borra: se redibuja
+  // al instante por si el bucle está detenido (game over)
+  useEffect(() => observarResolucion(canvasRef.current, () => juegoRef.current?.dibujar()), [])
 
   useEffect(() => {
     if (iniciado || terminado) return
@@ -238,10 +247,14 @@ export default function GameCanvas({
   return (
     <div className="flex w-full flex-col gap-2">
       <div
-        className="relative mx-auto w-full overflow-hidden"
+        className="relative mx-auto overflow-hidden"
         style={{
+          // Siempre en proporción 700:320 (antes se estiraba a lo alto en
+          // celulares). Ocupa todo el ancho, salvo que la pantalla sea baja:
+          // entonces se limita por el alto para que no haga falta scroll
+          // (130px = barra superior + márgenes + barra de controles)
+          width: 'min(100%, max(320px, calc((100dvh - 130px) * 700 / 320)))',
           aspectRatio: '700 / 320',
-          minHeight: 'clamp(220px, 45vh, 320px)',
           background: '#0a0a1a',
           border: '1px solid #6366f1',
           boxShadow: '0 0 16px #6366f133',
@@ -260,9 +273,9 @@ export default function GameCanvas({
 
         <canvas
           ref={canvasRef}
-          width={700}
-          height={320}
-          style={{ display: 'block', width: '100%', height: '100%', cursor: 'pointer' }}
+          width={ANCHO}
+          height={ALTO}
+          style={{ display: 'block', width: '100%', height: '100%', cursor: 'pointer', touchAction: 'none' }}
           onMouseDown={onPresionar}
           onMouseUp={onSoltar}
           onTouchStart={(e) => {
@@ -321,7 +334,7 @@ export default function GameCanvas({
 
         {terminado && (
           <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2"
+            className="absolute inset-0 flex flex-col items-center justify-center gap-1 sm:gap-2"
             style={{ background: 'rgba(10, 10, 26, 0.92)' }}
           >
             <canvas
@@ -362,12 +375,10 @@ export default function GameCanvas({
               }}
             >
               {puntajeFinal}
-            </p>
-            <p className="font-mono text-xs text-gray-400" style={{ zIndex: 1 }}>
-              puntos
-            </p>
-            <p className="font-mono text-xs text-gray-500" style={{ zIndex: 1 }}>
-              INTENTO #{intento}
+              <span className="font-mono text-xs font-normal text-gray-400" style={{ textShadow: 'none' }}>
+                {' '}
+                pts
+              </span>
             </p>
 
             {esRecord && (
@@ -439,6 +450,8 @@ export default function GameCanvas({
           </button>
         </div>
       </div>
+
+      <p className="aviso-girar">↻ Gira el teléfono para jugar en grande</p>
     </div>
   )
 }

@@ -326,22 +326,28 @@ function elegirModoAleatorioDistinto(actual) {
 }
 
 export class EndlessRunner {
-  constructor(canvas, config, modoInicial = 'cubo') {
+  // `ancho`/`alto` son el tamaño LÓGICO del mundo (700×320 por defecto): toda
+  // la física y el dibujo usan esas coordenadas. El canvas real puede tener
+  // más píxeles (pantallas retina, laptop a pantalla completa) y dibujar()
+  // escala al tamaño real para que se vea nítido.
+  constructor(canvas, config, modoInicial = 'cubo', { ancho = canvas.width, alto = canvas.height } = {}) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')
+    this.ancho = ancho
+    this.alto = alto
     this.config = config
     this.modoActual = modoInicial
 
     this.estrellas = Array.from({ length: 60 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
+      x: Math.random() * ancho,
+      y: Math.random() * alto,
       radio: 1 + Math.random(),
       opacidad: 0.3 + Math.random() * 0.7,
     }))
 
     this.lineasVelocidad = Array.from({ length: 8 }, (_, i) => ({
-      x: Math.random() * canvas.width,
-      y: (canvas.height / 8) * i + 10,
+      x: Math.random() * ancho,
+      y: (alto / 8) * i + 10,
       largo: 60 + Math.random() * 60,
       opacidad: 0.04 + Math.random() * 0.04,
     }))
@@ -352,7 +358,7 @@ export class EndlessRunner {
   reset() {
     this.jugador = {
       x: 80,
-      y: this.canvas.height - SUELO_ALTO - 36,
+      y: this.alto - SUELO_ALTO - 36,
       ancho: 36,
       alto: 36,
       velocidadY: 0,
@@ -589,7 +595,7 @@ export class EndlessRunner {
     this.edificios.forEach((e) => {
       e.x -= this.velocidad * 0.15
       if (e.x + e.ancho < 0) {
-        e.x = this.canvas.width + Math.random() * 100
+        e.x = this.ancho + Math.random() * 100
         e.ancho = 60 + Math.random() * 80
         e.alto = 40 + Math.random() * 80
         e.ventanas = generarVentanas()
@@ -599,7 +605,7 @@ export class EndlessRunner {
     this.nubes.forEach((n) => {
       n.x -= this.velocidad * 0.3
       if (n.x + n.radio * 2 < 0) {
-        n.x = this.canvas.width + Math.random() * 50
+        n.x = this.ancho + Math.random() * 50
         n.y = 20 + Math.random() * 60
       }
     })
@@ -607,7 +613,7 @@ export class EndlessRunner {
     this.plataformas.forEach((p) => {
       p.x -= this.velocidad * 0.6
       if (p.x + p.ancho < 0) {
-        p.x = this.canvas.width + Math.random() * 80
+        p.x = this.ancho + Math.random() * 80
         p.y = 60 + Math.random() * 100
         p.ancho = 40 + Math.random() * 60
       }
@@ -655,7 +661,7 @@ export class EndlessRunner {
 
   aplicarLimites() {
     const j = this.jugador
-    const suelo = this.canvas.height - SUELO_ALTO - j.alto
+    const suelo = this.alto - SUELO_ALTO - j.alto
     const sobrePozo = this.estaSobrePozo()
 
     if (this.modoActual === 'bola') {
@@ -681,7 +687,7 @@ export class EndlessRunner {
       }
       if (!estabaEnSuelo && j.enSuelo) this.squashTimer = 8
     } else if (this.modoActual === 'nave' || this.modoActual === 'ola') {
-      const max = this.canvas.height - 50
+      const max = this.alto - 50
       if (j.y < TECHO) j.y = TECHO
       if (j.y > max) j.y = max
     } else if (!this.gravedadInvertida) {
@@ -720,7 +726,7 @@ export class EndlessRunner {
   }
 
   generarObstaculo() {
-    const suelo = this.canvas.height - SUELO_ALTO
+    const suelo = this.alto - SUELO_ALTO
     const esPrincipiante = this.puntaje < this.nivelCfg.umbralComplejos
     const combosDisponibles = this.nivelCfg.combos
     const techoY = TECHO
@@ -746,12 +752,12 @@ export class EndlessRunner {
     // — Disponibles desde el nivel Fácil (sin gate de esPrincipiante) —
     if (rand < 0.1) {
       // Pico simple
-      this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
+      this.obstaculos.push({ tipo: 'pico', x: this.ancho, y: suelo - 50, ancho: 40, alto: 50 })
     } else if (rand < 0.18) {
       // Bloque doble
       this.obstaculos.push({
         tipo: 'bloqueDoble',
-        x: this.canvas.width,
+        x: this.ancho,
         y: suelo - 68,
         ancho: 34,
         alto: 68,
@@ -760,7 +766,7 @@ export class EndlessRunner {
       // Bloque triple — pared más alta, exige un salto bien cargado
       this.obstaculos.push({
         tipo: 'bloqueTriple',
-        x: this.canvas.width,
+        x: this.ancho,
         y: suelo - 84,
         ancho: 34,
         alto: 84,
@@ -768,14 +774,14 @@ export class EndlessRunner {
     } else if (rand < 0.29) {
       // Pico colgante del techo
       tocoTecho = true
-      this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, ancho: 40, alto: 50 })
+      this.obstaculos.push({ tipo: 'spikeTop', x: this.ancho, y: techoY, ancho: 40, alto: 50 })
     } else if (rand < 0.34) {
       // Sierra de techo — misma sierra de siempre, pegada arriba
       tocoTecho = true
       const radio = 20 + Math.random() * 10
       this.obstaculos.push({
         tipo: 'sierra',
-        x: this.canvas.width,
+        x: this.ancho,
         y: techoY,
         radio,
         rotacion: 0,
@@ -784,12 +790,12 @@ export class EndlessRunner {
     } else if (rand < 0.39) {
       // Bloque colgante del techo
       tocoTecho = true
-      this.obstaculos.push({ tipo: 'bloque', x: this.canvas.width, y: techoY, ancho: 34, alto: 50 })
+      this.obstaculos.push({ tipo: 'bloque', x: this.ancho, y: techoY, ancho: 34, alto: 50 })
     } else if (rand < 0.44) {
       // Bloque flotante en pleno aire — letal por cualquier lado, no es plataforma
       this.obstaculos.push({
         tipo: 'bloqueFlotante',
-        x: this.canvas.width,
+        x: this.ancho,
         y: 90 + Math.random() * 90,
         ancho: 34,
         alto: 34,
@@ -798,7 +804,7 @@ export class EndlessRunner {
       // Ventana: un marco flotante — solo es seguro pasar por el hueco central
       this.obstaculos.push({
         tipo: 'ventana',
-        x: this.canvas.width,
+        x: this.ancho,
         y: 80 + Math.random() * 70,
         ancho: 70,
         alto: 110,
@@ -810,7 +816,7 @@ export class EndlessRunner {
       const radio = 20
       this.obstaculos.push({
         tipo: 'sierra',
-        x: this.canvas.width,
+        x: this.ancho,
         y: techoY,
         radio,
         rotacion: 0,
@@ -818,7 +824,7 @@ export class EndlessRunner {
       })
       this.obstaculos.push({
         tipo: 'sierra',
-        x: this.canvas.width,
+        x: this.ancho,
         y: suelo - radio * 2,
         radio,
         rotacion: 0,
@@ -826,7 +832,7 @@ export class EndlessRunner {
       })
     } else if (rand < 0.57) {
       // Pozo: un tramo sin suelo — hay que saltarlo o cruzar volando
-      this.pozos.push({ tipo: 'pozo', x: this.canvas.width, ancho: 90 + Math.random() * 40 })
+      this.pozos.push({ tipo: 'pozo', x: this.ancho, ancho: 90 + Math.random() * 40 })
     } else if (rand < 0.65) {
       // Pad automático (siempre puede aparecer — es positivo, no requiere input)
       const variantes = esPrincipiante ? ['amarillo'] : ['amarillo', 'rosa', 'rojo', 'azul']
@@ -834,7 +840,7 @@ export class EndlessRunner {
       this.trampolin.push({
         tipo: 'trampolin',
         variante,
-        x: this.canvas.width,
+        x: this.ancho,
         y: suelo - 14,
         ancho: 56,
         alto: 14,
@@ -848,7 +854,7 @@ export class EndlessRunner {
       const radio = 22 + Math.random() * 12
       this.obstaculos.push({
         tipo: 'sierra',
-        x: this.canvas.width,
+        x: this.ancho,
         y: suelo - radio * 2,
         radio,
         rotacion: 0,
@@ -860,17 +866,17 @@ export class EndlessRunner {
       let altoSuelo = 45 + Math.random() * 25
       const altoTecho = 40 + Math.random() * 20
       const huecoMinimo = 80
-      const alturaDisponible = this.canvas.height - SUELO_ALTO
+      const alturaDisponible = this.alto - SUELO_ALTO
       const huecoReal = alturaDisponible - altoSuelo - altoTecho
       if (huecoReal < huecoMinimo) altoSuelo = alturaDisponible - altoTecho - huecoMinimo
 
-      this.obstaculos.push({ tipo: 'picoDoble', x: this.canvas.width, anchoBase: 44, altoSuelo, altoTecho })
+      this.obstaculos.push({ tipo: 'picoDoble', x: this.ancho, anchoBase: 44, altoSuelo, altoTecho })
     } else if (rand < 0.79 && !esPrincipiante) {
       // Picos triples — la estructura más icónica de GD
       for (let i = 0; i < 3; i++) {
         this.obstaculos.push({
           tipo: 'pico',
-          x: this.canvas.width + i * 40,
+          x: this.ancho + i * 40,
           y: suelo - 50,
           ancho: 40,
           alto: 50,
@@ -879,7 +885,7 @@ export class EndlessRunner {
     } else if (rand < 0.83 && !esPrincipiante) {
       // Pendiente (slope): rampa sólida de 45°
       const direccion = Math.random() < 0.5 ? 1 : -1
-      this.slopes.push({ tipo: 'slope', x: this.canvas.width, anchoBase: 70, altoMax: 38, direccion })
+      this.slopes.push({ tipo: 'slope', x: this.ancho, anchoBase: 70, altoMax: 38, direccion })
     } else if (rand < 0.845 && !esPrincipiante) {
       // Pinchos en zigzag — varios picos de techo alternando alto/bajo,
       // nunca pasan de la mitad de la pantalla
@@ -902,7 +908,7 @@ export class EndlessRunner {
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
         tipo: 'plataformaMovil',
-        x: this.canvas.width,
+        x: this.ancho,
         y: yBase,
         yBase,
         ancho: 80 + Math.random() * 40,
@@ -918,7 +924,7 @@ export class EndlessRunner {
       const yBase = 70 + Math.random() * 120
       this.plataformasMoviles.push({
         tipo: 'plataformaMovil',
-        x: this.canvas.width,
+        x: this.ancho,
         y: yBase,
         yBase,
         ancho: 90,
@@ -940,7 +946,7 @@ export class EndlessRunner {
       this.orbes.push({
         tipo: 'orbe',
         variante,
-        x: this.canvas.width,
+        x: this.ancho,
         y: 60 + Math.random() * 140,
         radio: 14,
         pulsacion: 0,
@@ -948,15 +954,15 @@ export class EndlessRunner {
       })
     } else if (rand < 0.955 && !esPrincipiante) {
       // Imán invertido: no mata, desestabiliza
-      this.imanes.push({ tipo: 'iman', x: this.canvas.width, y: this.canvas.height / 2, radio: 70, pulsacion: 0 })
+      this.imanes.push({ tipo: 'iman', x: this.ancho, y: this.alto / 2, radio: 70, pulsacion: 0 })
     } else if (rand < 0.96 && !esPrincipiante) {
       // Muro frágil: se rompe si cae encima, mata si lo toca de costado
-      this.obstaculos.push({ tipo: 'muroFragil', x: this.canvas.width, y: suelo - 40, ancho: 36, alto: 40 })
+      this.obstaculos.push({ tipo: 'muroFragil', x: this.ancho, y: suelo - 40, ancho: 36, alto: 40 })
     } else if (rand < 0.98 && !esPrincipiante) {
       // Guillotina: pico que se extiende en ciclos cortos, pero nunca pasa
       // de la mitad de la pantalla — puede colgar del techo o subir del
       // suelo (se elige al azar)
-      const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+      const alturaDisponible = this.alto - SUELO_ALTO - TECHO
       const altoMax = alturaDisponible * 0.5
       const cicloComun = {
         ancho: 40,
@@ -973,12 +979,12 @@ export class EndlessRunner {
       if (Math.random() < 0.5) {
         // Variante de techo
         tocoTecho = true
-        this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, alto: 50, ...cicloComun })
+        this.obstaculos.push({ tipo: 'spikeTop', x: this.ancho, y: techoY, alto: 50, ...cicloComun })
       } else {
         // Variante de suelo — sube desde abajo en vez de bajar del techo
         this.obstaculos.push({
           tipo: 'pico',
-          x: this.canvas.width,
+          x: this.ancho,
           y: suelo - 50,
           alto: 50,
           ...cicloComun,
@@ -993,12 +999,12 @@ export class EndlessRunner {
       this.obstaculos.push({
         tipo: 'sierra',
         orbital: true,
-        centroX: this.canvas.width + radioOrbita,
+        centroX: this.ancho + radioOrbita,
         centroY: 90 + Math.random() * 110,
         radioOrbita,
         anguloOrbita: Math.random() * Math.PI * 2,
         velocidadOrbita: 0.04 + Math.random() * 0.02,
-        x: this.canvas.width,
+        x: this.ancho,
         y: 90,
         radio,
         rotacion: 0,
@@ -1010,7 +1016,7 @@ export class EndlessRunner {
       tocoTecho = true
       this.pinzas.push({
         tipo: 'pinza',
-        x: this.canvas.width,
+        x: this.ancho,
         ancho: 40,
         cicloTimer: 0,
         fase: Math.random() * Math.PI * 2,
@@ -1020,7 +1026,7 @@ export class EndlessRunner {
       })
     } else {
       // Pico simple de respaldo
-      this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
+      this.obstaculos.push({ tipo: 'pico', x: this.ancho, y: suelo - 50, ancho: 40, alto: 50 })
     }
 
     if (!esPrincipiante) {
@@ -1035,7 +1041,7 @@ export class EndlessRunner {
     alturas.forEach((alto, i) => {
       this.obstaculos.push({
         tipo: 'spikeTop',
-        x: this.canvas.width + i * 40,
+        x: this.ancho + i * 40,
         y: techoY,
         ancho: 40,
         alto,
@@ -1046,11 +1052,11 @@ export class EndlessRunner {
   // Franja láser que cuelga del techo y parpadea: visible = letal, apagada
   // = segura. Su borde inferior nunca pasa de la mitad de la pantalla.
   generarLaserIntermitente() {
-    const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+    const alturaDisponible = this.alto - SUELO_ALTO - TECHO
     const altoMax = alturaDisponible * 0.5
     this.obstaculos.push({
       tipo: 'laser',
-      x: this.canvas.width,
+      x: this.ancho,
       y: TECHO + 20 + Math.random() * (altoMax - 30),
       ancho: 90,
       alto: 8,
@@ -1065,18 +1071,18 @@ export class EndlessRunner {
   // longitud está limitada para que nunca alcance más de la mitad de la
   // pantalla, dejando siempre un hueco seguro abajo.
   generarPendulo() {
-    const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+    const alturaDisponible = this.alto - SUELO_ALTO - TECHO
     const largo = alturaDisponible * (0.3 + Math.random() * 0.2)
     const radio = 14
     this.obstaculos.push({
       tipo: 'sierra',
       pendulo: true,
-      anclaX: this.canvas.width,
+      anclaX: this.ancho,
       anclaY: TECHO,
       largo,
       anguloPendulo: (Math.random() < 0.5 ? -1 : 1) * (0.6 + Math.random() * 0.3),
       velocidadPendulo: 0.025 + Math.random() * 0.015,
-      x: this.canvas.width,
+      x: this.ancho,
       y: TECHO + largo,
       radio,
       rotacion: 0,
@@ -1088,11 +1094,11 @@ export class EndlessRunner {
   // — pero se detiene antes de llegar a la mitad de la pantalla, así que
   // siempre queda un hueco abajo para pasar.
   generarBloqueCayendo() {
-    const alturaDisponible = this.canvas.height - SUELO_ALTO - TECHO
+    const alturaDisponible = this.alto - SUELO_ALTO - TECHO
     const caidaMax = alturaDisponible * 0.5
     this.obstaculos.push({
       tipo: 'bloque',
-      x: this.canvas.width,
+      x: this.ancho,
       y: TECHO,
       ancho: 34,
       alto: 36,
@@ -1107,12 +1113,12 @@ export class EndlessRunner {
   // techo — garantiza que nunca pase mucho tiempo sin un obstáculo arriba.
   generarObstaculoTechoForzado(techoY, suelo) {
     const opciones = [
-      () => this.obstaculos.push({ tipo: 'spikeTop', x: this.canvas.width, y: techoY, ancho: 40, alto: 50 }),
+      () => this.obstaculos.push({ tipo: 'spikeTop', x: this.ancho, y: techoY, ancho: 40, alto: 50 }),
       () => {
         const radio = 20 + Math.random() * 10
         this.obstaculos.push({
           tipo: 'sierra',
-          x: this.canvas.width,
+          x: this.ancho,
           y: techoY,
           radio,
           rotacion: 0,
@@ -1135,11 +1141,11 @@ export class EndlessRunner {
       case 'sierraPico': {
         // Pico de suelo + sierra flotante poco después: hay que ajustar la
         // altura del aterrizaje antes de que llegue la sierra
-        this.obstaculos.push({ tipo: 'pico', x: this.canvas.width, y: suelo - 50, ancho: 40, alto: 50 })
+        this.obstaculos.push({ tipo: 'pico', x: this.ancho, y: suelo - 50, ancho: 40, alto: 50 })
         const radio = 20
         this.obstaculos.push({
           tipo: 'sierra',
-          x: this.canvas.width + 110,
+          x: this.ancho + 110,
           y: suelo - 40 - radio * 2 - 20,
           radio,
           rotacion: 0,
@@ -1153,10 +1159,10 @@ export class EndlessRunner {
         // desliza hacia abajo y enseguida hacia arriba sin perder ritmo
         const anchoBase = 70
         const altoMax = 38
-        this.slopes.push({ tipo: 'slope', x: this.canvas.width, anchoBase, altoMax, direccion: -1 })
+        this.slopes.push({ tipo: 'slope', x: this.ancho, anchoBase, altoMax, direccion: -1 })
         this.slopes.push({
           tipo: 'slope',
-          x: this.canvas.width + anchoBase,
+          x: this.ancho + anchoBase,
           anchoBase,
           altoMax,
           direccion: 1,
@@ -1170,14 +1176,14 @@ export class EndlessRunner {
         this.trampolin.push({
           tipo: 'trampolin',
           variante: 'rojo',
-          x: this.canvas.width,
+          x: this.ancho,
           y: suelo - 14,
           ancho: 56,
           alto: 14,
           animando: false,
           frameAnimacion: 0,
         })
-        const inicioX = this.canvas.width + 56 + 40
+        const inicioX = this.ancho + 56 + 40
         for (let i = 0; i < 4; i++) {
           this.obstaculos.push({
             tipo: 'pico',
@@ -1196,7 +1202,7 @@ export class EndlessRunner {
         for (let i = 0; i < 4; i++) {
           this.obstaculos.push({
             tipo: 'pico',
-            x: this.canvas.width + i * 40,
+            x: this.ancho + i * 40,
             y: suelo - 50,
             ancho: 40,
             alto: 50,
@@ -1207,7 +1213,7 @@ export class EndlessRunner {
           const y = suelo - altura
           this.plataformasMoviles.push({
             tipo: 'plataformaMovil',
-            x: this.canvas.width + i * 70,
+            x: this.ancho + i * 70,
             y,
             yBase: y,
             ancho: 60,
@@ -1227,7 +1233,7 @@ export class EndlessRunner {
         this.orbes.push({
           tipo: 'orbe',
           variante: 'azul',
-          x: this.canvas.width,
+          x: this.ancho,
           y: suelo - 60,
           radio: 14,
           pulsacion: 0,
@@ -1236,7 +1242,7 @@ export class EndlessRunner {
         this.orbes.push({
           tipo: 'orbe',
           variante: 'verde',
-          x: this.canvas.width + 140,
+          x: this.ancho + 140,
           y: TECHO + 60,
           radio: 14,
           pulsacion: 0,
@@ -1250,14 +1256,14 @@ export class EndlessRunner {
         // se agranda respecto al normal para dejar margen real a los lados
         const altoTecho = 45
         const huecoMinimoExtra = 110
-        const alturaDisponible = this.canvas.height - SUELO_ALTO
+        const alturaDisponible = this.alto - SUELO_ALTO
         let altoSuelo = 50
         const huecoReal = alturaDisponible - altoSuelo - altoTecho
         if (huecoReal < huecoMinimoExtra) altoSuelo = alturaDisponible - altoTecho - huecoMinimoExtra
 
         this.obstaculos.push({
           tipo: 'picoDoble',
-          x: this.canvas.width,
+          x: this.ancho,
           anchoBase: 44,
           altoSuelo,
           altoTecho,
@@ -1266,7 +1272,7 @@ export class EndlessRunner {
         const centroHueco = altoTecho + (alturaDisponible - altoSuelo - altoTecho) / 2
         this.obstaculos.push({
           tipo: 'sierra',
-          x: this.canvas.width + 6,
+          x: this.ancho + 6,
           y: centroHueco - 16,
           radio: 16,
           rotacion: 0,
@@ -1281,8 +1287,8 @@ export class EndlessRunner {
     const modoDestino = elegirModoAleatorioDistinto(this.modoActual)
     this.portalesModo.push({
       tipo: 'portalModo',
-      x: this.canvas.width,
-      y: this.canvas.height / 2 - 50,
+      x: this.ancho,
+      y: this.alto / 2 - 50,
       ancho: 40,
       alto: 100,
       modoDestino,
@@ -1412,7 +1418,7 @@ export class EndlessRunner {
   }
 
   colisionPicoDoble(obs) {
-    const h = this.canvas.height
+    const h = this.alto
     const margen = 4
     const jx1 = this.jugador.x + margen
     const jx2 = this.jugador.x + this.jugador.ancho - margen
@@ -1519,7 +1525,7 @@ export class EndlessRunner {
 
   // Altura de la superficie de una pendiente en una coordenada X del mundo
   superficieSlope(s, x) {
-    const suelo = this.canvas.height - SUELO_ALTO
+    const suelo = this.alto - SUELO_ALTO
     const f = Math.max(0, Math.min(1, (x - s.x) / s.anchoBase))
     return s.direccion === 1 ? suelo - f * s.altoMax : suelo - (1 - f) * s.altoMax
   }
@@ -1565,7 +1571,7 @@ export class EndlessRunner {
     if (jx2 < p.x || jx1 > p.x + p.ancho) return false
 
     const regionTop = TECHO
-    const regionBottom = this.canvas.height - SUELO_ALTO
+    const regionBottom = this.alto - SUELO_ALTO
     const bloqueAlto = (regionBottom - regionTop - p.huecoActual) / 2
 
     const jy1 = j.y + margen
@@ -1863,7 +1869,7 @@ export class EndlessRunner {
         }
 
         if (o.guillotinaSuelo) {
-          const suelo = this.canvas.height - SUELO_ALTO
+          const suelo = this.alto - SUELO_ALTO
           o.y = suelo - o.alto
         }
       }
@@ -1944,7 +1950,7 @@ export class EndlessRunner {
 
     this.lineasVelocidad.forEach((l) => {
       l.x -= this.velocidad * 2
-      if (l.x + l.largo < 0) l.x = this.canvas.width
+      if (l.x + l.largo < 0) l.x = this.ancho
     })
 
     this.particulas = this.particulas.filter((p) => p.vida > 0)
@@ -1958,7 +1964,7 @@ export class EndlessRunner {
     else this.mensajeModo = null
 
     // Caer fuera de la pantalla por un pozo también mata (igual que en GD)
-    if (!this.terminado && this.jugador.y > this.canvas.height + 20) {
+    if (!this.terminado && this.jugador.y > this.alto + 20) {
       this.terminado = true
       audio.muerte()
       this.generarParticulas()
@@ -1969,8 +1975,8 @@ export class EndlessRunner {
 
   dibujarFondo() {
     const ctx = this.ctx
-    const w = this.canvas.width
-    const h = this.canvas.height
+    const w = this.ancho
+    const h = this.alto
     const colorFondo = this.config.jugador.colorFondo
 
     ctx.fillStyle = colorFondo
@@ -2033,8 +2039,8 @@ export class EndlessRunner {
 
   dibujarSuelo() {
     const ctx = this.ctx
-    const w = this.canvas.width
-    const h = this.canvas.height
+    const w = this.ancho
+    const h = this.alto
 
     ctx.fillStyle = '#1e293b'
     ctx.fillRect(0, h - SUELO_ALTO, w, SUELO_ALTO)
@@ -2243,7 +2249,7 @@ export class EndlessRunner {
 
   dibujarPicoDoble(obs) {
     const ctx = this.ctx
-    const h = this.canvas.height
+    const h = this.alto
 
     ctx.fillStyle = '#f97316'
     ctx.shadowBlur = 10
@@ -2298,7 +2304,7 @@ export class EndlessRunner {
 
   dibujarSlope(s) {
     const ctx = this.ctx
-    const suelo = this.canvas.height - SUELO_ALTO
+    const suelo = this.alto - SUELO_ALTO
 
     ctx.save()
     ctx.fillStyle = '#0ea5e9'
@@ -2335,7 +2341,7 @@ export class EndlessRunner {
   dibujarPinza(p) {
     const ctx = this.ctx
     const regionTop = TECHO
-    const regionBottom = this.canvas.height - SUELO_ALTO
+    const regionBottom = this.alto - SUELO_ALTO
     const bloqueAlto = (regionBottom - regionTop - p.huecoActual) / 2
 
     ctx.save()
@@ -2663,14 +2669,14 @@ export class EndlessRunner {
     ctx.shadowBlur = 10
     ctx.shadowColor = color
     ctx.textAlign = 'center'
-    ctx.fillText(this.mensajeModo, this.canvas.width / 2, 60)
+    ctx.fillText(this.mensajeModo, this.ancho / 2, 60)
     ctx.textAlign = 'left'
     ctx.restore()
   }
 
   dibujarUI() {
     const ctx = this.ctx
-    const w = this.canvas.width
+    const w = this.ancho
 
     ctx.save()
 
@@ -2725,12 +2731,15 @@ export class EndlessRunner {
     // Velocidad (pequeño, debajo del puntaje)
     ctx.fillStyle = '#64748b'
     ctx.font = '10px monospace'
-    ctx.fillText(`vel ${this.velocidad.toFixed(1)}`, 12, this.canvas.height - 8)
+    ctx.fillText(`vel ${this.velocidad.toFixed(1)}`, 12, this.alto - 8)
 
     ctx.restore()
   }
 
   dibujar() {
+    // Del mundo lógico a los píxeles reales del canvas
+    this.ctx.setTransform(this.canvas.width / this.ancho, 0, 0, this.canvas.height / this.alto, 0, 0)
+
     this.dibujarFondo()
     this.dibujarSuelo()
     this.slopes.forEach((s) => this.dibujarSlope(s))

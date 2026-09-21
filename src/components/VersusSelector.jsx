@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { MODOS, NIVELES } from '../games/endlessrunner'
+import { contextoHD } from '../lib/canvasHD'
 
 const defaultJ1 = {
   jugador: { nombre: 'Jugador 1', color: '#6366f1', colorFondo: '#0a0a1a' },
@@ -22,15 +23,15 @@ function PreviewCubo({ color }) {
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
+    const ctx = contextoHD(canvas, 80, 80)
 
     const dibujar = () => {
       rotacionRef.current += 0.02
       ctx.fillStyle = '#0a0a1a'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillRect(0, 0, 80, 80)
 
-      const cx = canvas.width / 2
-      const cy = canvas.height / 2
+      const cx = 40
+      const cy = 40
       const lado = 32
 
       ctx.save()
@@ -62,7 +63,7 @@ function PreviewCubo({ color }) {
       ref={canvasRef}
       width={80}
       height={80}
-      style={{ borderRadius: 8, background: '#0a0a1a' }}
+      style={{ width: 80, height: 80, borderRadius: 8, background: '#0a0a1a' }}
     />
   )
 }

@@ -55,14 +55,17 @@ function dibujarCountdown(ctx, totalAncho, alto, configJ1, configJ2) {
 }
 
 export class EndlessRunnerVersus {
-  constructor(canvas, configJ1, configJ2) {
+  constructor(canvas, configJ1, configJ2, { ancho = canvas.width, alto = canvas.height } = {}) {
     this.canvas = canvas
     this.ctx = canvas.getContext('2d')
-    this.anchoMitad = canvas.width / 2
-    this.alto = canvas.height
+    // Tamaño lógico (900×320): el canvas real puede tener más píxeles
+    this.ancho = ancho
+    this.alto = alto
+    this.anchoMitad = this.ancho / 2
+    this.anchoJuego = this.anchoMitad - 2
 
-    this.canvasJ1 = new OffscreenCanvas(this.anchoMitad - 2, this.alto)
-    this.canvasJ2 = new OffscreenCanvas(this.anchoMitad - 2, this.alto)
+    this.canvasJ1 = new OffscreenCanvas(this.anchoJuego, this.alto)
+    this.canvasJ2 = new OffscreenCanvas(this.anchoJuego, this.alto)
     this.ctxJ1 = this.canvasJ1.getContext('2d')
     this.ctxJ2 = this.canvasJ2.getContext('2d')
 
@@ -82,8 +85,9 @@ export class EndlessRunnerVersus {
   }
 
   reset() {
-    this.juegoJ1 = new EndlessRunner(this.canvasJ1, this.configJ1, this.configJ1.modoInicial)
-    this.juegoJ2 = new EndlessRunner(this.canvasJ2, this.configJ2, this.configJ2.modoInicial)
+    const tamano = { ancho: this.anchoJuego, alto: this.alto }
+    this.juegoJ1 = new EndlessRunner(this.canvasJ1, this.configJ1, this.configJ1.modoInicial, tamano)
+    this.juegoJ2 = new EndlessRunner(this.canvasJ2, this.configJ2, this.configJ2.modoInicial, tamano)
     this.corriendo = false
     this.terminado = false
     this.ganador = null
@@ -178,13 +182,26 @@ export class EndlessRunnerVersus {
   }
 
   dibujar() {
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height)
+    const sx = this.canvas.width / this.ancho
+    const sy = this.canvas.height / this.alto
+
+    // Cada mitad se dibuja a la misma resolución real que ocupa en pantalla
+    const w = Math.round(this.anchoJuego * sx)
+    const h = Math.round(this.alto * sy)
+    for (const c of [this.canvasJ1, this.canvasJ2]) {
+      if (c.width !== w || c.height !== h) {
+        c.width = w
+        c.height = h
+      }
+    }
 
     this.juegoJ1.dibujar()
     this.juegoJ2.dibujar()
 
-    this.ctx.drawImage(this.canvasJ1, 0, 0)
-    this.ctx.drawImage(this.canvasJ2, this.anchoMitad + 2, 0)
+    this.ctx.setTransform(sx, 0, 0, sy, 0, 0)
+    this.ctx.clearRect(0, 0, this.ancho, this.alto)
+    this.ctx.drawImage(this.canvasJ1, 0, 0, this.anchoJuego, this.alto)
+    this.ctx.drawImage(this.canvasJ2, this.anchoMitad + 2, 0, this.anchoJuego, this.alto)
 
     this.ctx.fillStyle = '#1e293b'
     this.ctx.fillRect(this.anchoMitad - 1, 0, 3, this.alto)
@@ -204,7 +221,7 @@ export class EndlessRunnerVersus {
     }
 
     if (!this.corriendo && !this.terminado) {
-      dibujarCountdown(this.ctx, this.canvas.width, this.canvas.height, this.configJ1, this.configJ2)
+      dibujarCountdown(this.ctx, this.ancho, this.alto, this.configJ1, this.configJ2)
     }
   }
 }
