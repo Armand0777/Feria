@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # GeoRunner — Feria de Ingeniería de Sistemas
 
 App web (React 19 + Vite 8 + Tailwind v4) con juegos para una feria universitaria: un endless runner estilo Geometry Dash (Estación 1), un Versus local de 2 jugadores, un 3 en raya (Estación 2) y una pantalla de ranking en vivo para TV. Los puntajes se guardan en Supabase.
@@ -9,7 +13,7 @@ App web (React 19 + Vite 8 + Tailwind v4) con juegos para una feria universitari
 
 - `npm run dev` — Vite con `--host` (accesible desde celulares en la misma red)
 - `npm run build` / `npm run preview`
-- `npm run lint` — oxlint (`.oxlintrc.json`)
+- `npm run lint` — oxlint (`.oxlintrc.json`). CI corre `npm run lint -- --deny-warnings`: un warning (p. ej. `react/only-export-components`) rompe el CI aunque el lint local pase. Un solo archivo: `npx oxlint src/App.jsx`.
 - No hay tests.
 
 ## Variables de entorno
@@ -37,7 +41,7 @@ App guarda el estado de sesión: `config` (jugador, modo, nivel, control, físic
   - `endlessrunnerVersus.js` — `EndlessRunnerVersus`: dos `EndlessRunner` sobre `OffscreenCanvas` (uno por mitad) compuestos en un canvas de 900×320. Registra su propio teclado (W/Espacio = J1, ↑ = J2) y control por posición del toque.
 - `src/components/` — `GameCanvas` y `VersusCanvas` son dueños del loop `requestAnimationFrame` y del input (teclado, mouse, touch). `GameCanvas` expone `presionar()`/`soltar()` por `ref` (`useImperativeHandle`) para otros controles. El resto son pantallas de UI: `ConfigPanel`, `GameSelector`, `ResultadoFinal`, `Ranking`, `VersusSelector`, `TicTacToeSelector`, `TicTacToe` (estado propio, CPU simple), `CodigoQR`, `PanelCamara`.
 - `src/ia/` — control por cámara con redes neuronales (MediaPipe `@mediapipe/tasks-vision`), ver abajo.
-- `src/pages/` — `RankingTV` (ruta `/ranking-tv`) y `ResultadoVersus`.
+- `src/pages/` — `RankingTV` (ruta `/ranking-tv`) y `ResultadoVersus` (que no es una ruta: la renderiza App en `versus-resultado`).
 - `src/lib/audio.js` — singleton `audio`: efectos con Web Audio API y música en bucle con `<audio>` (`public/musica-fondo.mp3`). Tecla M = mute.
 - `src/lib/supabase.js` — cliente Supabase.
 - `src/lib/canvasHD.js` — canvas nítido: la resolución interna = tamaño en pantalla × devicePixelRatio (tope 2,4 MP). Los motores reciben su tamaño **lógico** (`{ ancho, alto }`, 700×320 / 900×320) y `dibujar()` escala con `setTransform`; nunca usar `canvas.width` como coordenada del mundo.
@@ -62,18 +66,19 @@ App guarda el estado de sesión: `config` (jugador, modo, nivel, control, físic
 - Entidades en listas separadas: `obstaculos` (letales; `tipo` = pico, spikeTop, bloque, bloqueDoble, bloqueTriple, bloqueFlotante, ventana, sierra [variantes `orbital` y `pendulo`], picoDoble, muroFragil, laser), `pozos`, `slopes`, `pinzas`, `plataformasMoviles`, `trampolin` (pads automáticos), `orbes` (requieren tap), `imanes`, `portalesModo` (cambian de modo cada ~400–600 frames).
 - `generarObstaculo()` elige por bandas de `Math.random()`. Los obstáculos complejos solo aparecen desde `nivelCfg.umbralComplejos`; `generarCombo()` arma patrones compuestos según `nivelCfg.combos`; el anti-sequía fuerza un obstáculo de techo tras 5 generaciones sin uno.
 - Para agregar un obstáculo: crearlo en `generarObstaculo()`, moverlo en `actualizar()`, darle colisión en `verificarColisiones()` y dibujo en `dibujarObstaculo()`. Si no tiene `ancho`, `radio` ni `anchoBase`, agregarlo a `anchoEfectivo()`.
+- Varias variantes no son un `tipo` propio sino flags sobre uno existente, y cada paso las revisa con `if (o.flag)`: `guillotina` (+ `guillotinaSuelo`) sobre `spikeTop`/`pico`, `orbital`/`pendulo` sobre `sierra`. La plataforma intermitente vive en `plataformasMoviles`.
 - Muerte: `terminado = true` y `generarParticulas()` (que también detiene la música). Se animan 60 frames de explosión y `GameCanvas` muestra el overlay 1 s después.
 - Campos que ajusta quien lo usa: `meta` (récord de la sesión para la barra del HUD; 0 = hitos), `mostrarHUD` y `colorFijo` (el versus los pone en false/true). `colorJugador()`: el cubo usa el color elegido; los demás modos, su color propio (en versus siempre el del jugador).
 - `GameCanvas` maneja pausa (P/Esc/botón, y al ocultar la pestaña) y guarda un solo puntaje por sesión: `App.estadoGuardado` = pendiente → guardando → guardado | error.
 
 ## Verificación
 
-Hay Playwright + Chromium en la caché de npx (`%LOCALAPPDATA%/npm-cache/_npx/*/node_modules/playwright`): sirve para probar el juego corriendo a 60 fps y sacar capturas (`docs/capturas/`). En las pruebas, **interceptar las escrituras a Supabase** (`context.route('**/*.supabase.co/rest/**')`): la base es la real de la feria. Para medir la IA con GPU real: `--use-angle=d3d11 --enable-gpu --ignore-gpu-blocklist`. CI (`.github/workflows/ci.yml`) corre `oxlint --deny-warnings` y el build.
+Hay Playwright + Chromium en la caché de npx (`%LOCALAPPDATA%/npm-cache/_npx/*/node_modules/playwright`): sirve para probar el juego corriendo a 60 fps y sacar capturas (`docs/capturas/`). En las pruebas, **interceptar las escrituras a Supabase** (`context.route('**/*.supabase.co/rest/**')`): la base es la real de la feria. Para medir la IA con GPU real: `--use-angle=d3d11 --enable-gpu --ignore-gpu-blocklist`. CI (`.github/workflows/ci.yml`, Node 22) corre el lint estricto y `npm run build`.
 
 ## Supabase
 
-Tabla `puntajes`: `id`, `nombre`, `color`, `puntaje`, `juego` (`'geo-runner'`), `creado_en`. Se inserta desde `App.jsx` (al salir) y `ResultadoFinal.jsx` (botón guardar). `Ranking` y `RankingTV` leen el top 10 y se suscriben a INSERT por Realtime (`postgres_changes`). `RankingTV` además refresca cada 30 s y cuenta los inserts del día.
+Tabla `puntajes`: `id`, `nombre`, `color`, `puntaje`, `juego` (`'geo-runner'`), `creado_en`; el SQL de creación (checks y políticas RLS) está en el README. El único insert es `guardarPuntaje()` en `App.jsx`: se llama al salir de la sesión y desde el botón de reintento de `ResultadoFinal` (`onReintentarGuardado`); `ResultadoFinal` no toca Supabase. `Ranking` y `RankingTV` leen el top 10 (sin filtrar por `juego`) y se suscriben a INSERT por Realtime (`postgres_changes`). `RankingTV` además refresca cada 30 s y cuenta los inserts del día. `GameSelector` lee el récord histórico (top 1).
 
 ## Despliegue
 
-Vercel, sitio estático. `CodigoQR.jsx` tiene la URL pública hardcodeada (`URL_JUEGO`) y genera el QR con api.qrserver.com (necesita internet).
+Vercel, sitio estático: **cada push a `main` se publica solo en producción** (la URL que usa la feria). `vercel.json` reescribe todas las rutas a `index.html` para que `/ranking-tv` funcione. Las variables `VITE_SUPABASE_*` están configuradas en el proyecto de Vercel. `CodigoQR.jsx` tiene la URL pública hardcodeada (`URL_JUEGO`) y genera el QR con api.qrserver.com (necesita internet).
